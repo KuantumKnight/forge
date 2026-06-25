@@ -81,15 +81,15 @@ forge/
 
 ---
 
-## ☐ PHASE 0 — Setup (🔴 BLOCKING · ~1 hr · do together, June 25 AM)
+## ✅ PHASE 0 — Setup (🔴 BLOCKING · ~1 hr · do together, June 25 AM) — DONE
 
-- [ ] **[A+B]** Create GitHub repo `forge`, both have push access. — commit: `chore: init repo`
-- [ ] **[A+B]** Add `.gitignore` (env, node_modules, __pycache__, .venv). — commit: `chore: add gitignore`
-- [ ] **[A+B]** Scaffold folder layout above (empty dirs w/ `.gitkeep`). — commit: `chore: scaffold project structure`
-- [ ] **[A+B]** `.env.example` with `MODEL_API_KEY=`, `GITHUB_PAT=`, `LEMMA_*=`. — commit: `chore: add env example`
-- [ ] **[A+B]** Copy `PRD.md` into `docs/`; create empty `DECISIONS.md`. — commit: `docs: add PRD and decisions log`
-- [ ] **[A+B]** 🔗 **CONTRACT:** write `docs/contracts.md` — `issues` table fields, triage JSON shape, investigation result shape. — commit: `docs: freeze data contracts`
-- [ ] **[A+B]** Agree lane ownership + the kill-criteria from Part 1 §9; note in `DECISIONS.md`. — commit: `docs: record scope and kill criteria`
+- [x] **[A+B]** Create GitHub repo `forge`, both have push access. — commit: `chore: init repo` _(live at KuantumKnight/forge, private; still TODO: add teammate as collaborator)_
+- [x] **[A+B]** Add `.gitignore` (env, node_modules, __pycache__, .venv). — commit: `chore: add gitignore`
+- [x] **[A+B]** Scaffold folder layout above (empty dirs w/ `.gitkeep`). — commit: `chore: scaffold project structure`
+- [x] **[A+B]** `.env.example` with `MODEL_API_KEY=`, `GITHUB_PAT=`, `LEMMA_*=`. — commit: `chore: add env example`
+- [x] **[A+B]** Copy `PRD.md` into `docs/`; create empty `DECISIONS.md`. — commit: `docs: add PRD and decisions log`
+- [x] **[A+B]** 🔗 **CONTRACT:** write `docs/contracts.md` — `issues` table fields, triage JSON shape, investigation result shape. — commit: `docs: freeze data contracts`
+- [x] **[A+B]** Agree lane ownership + the kill-criteria from Part 1 §9; note in `DECISIONS.md`. — commit: `docs: record scope and kill criteria`
 
 > ✅ Exit Phase 0: repo runs `git status` clean for both, contract frozen. **Now split.**
 
