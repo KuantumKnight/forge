@@ -1,0 +1,33 @@
+# Secrets — never commit
+.env
+.env.local
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Node / App
+node_modules/
+dist/
+build/
+.cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs / scratch
+*.log
+logs/
+tmp/
+
+# Internal planning docs (not part of the submitted build — remove these lines to commit them)
+deep-research-report.md
+claude_opinion_prd.md
