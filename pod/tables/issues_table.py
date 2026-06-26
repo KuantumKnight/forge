@@ -42,9 +42,11 @@ ISSUES_SCHEMA: dict = {
          "description": "markdown bullet list; null until triaged"},
         {"name": "status", "type": "ENUM", "options": STATUSES,
          "required": True, "default": "new"},
-        {"name": "related_ids", "type": "JSON", "default": [],
+        # JSON column defaults must be scalar literals (the API rejects [] as a
+        # default), so callers set these to [] explicitly on insert.
+        {"name": "related_ids", "type": "JSON",
          "description": "ids of confirmed duplicates / related issues"},
-        {"name": "linked_prs", "type": "JSON", "default": [],
+        {"name": "linked_prs", "type": "JSON",
          "description": "PR identifiers that fix it (optional)"},
     ],
 }
