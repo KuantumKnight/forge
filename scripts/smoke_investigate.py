@@ -80,12 +80,15 @@ def _check(result: dict, require_fix: bool = False) -> tuple[bool, list[str]]:
 def main() -> int:
     refresh = "--refresh-samples" in sys.argv
     load_env()
-    pod = get_pod()
 
     failed = False
     samples: dict[str, dict] = {}
     for issue_id in ANCHORS:
         require_fix = issue_id in SOURCE_GROUNDED
+        # Re-resolve the pod per anchor so each run starts with a freshly refreshed
+        # access token (get_pod mints one) — two ~2-3 min runs can otherwise outlive
+        # one access token's TTL.
+        pod = get_pod()
         result = investigate(pod, issue_id)
         ok, notes = _check(result, require_fix=require_fix)
         # The backend is intermittently degraded (EXECUTION.md D4 box 6): a node can
