@@ -88,3 +88,11 @@ UI rule: render evidence as clickable links. **No confidence %** — show eviden
     `updated_at` are auto-materialized system columns. `issues` is created with
     `enable_rls=False` (shared team table, not per-user).
   - No field names changed — the `issues`/triage/investigation shapes are intact.
+- 2026-06-26 — table created live on pod `forge` and verified end-to-end. Two
+  facts learned creating it; **no field renames**, so the seam is unchanged:
+  - A custom string `id` PK **is** accepted, so the human-readable ids
+    (`gh_142`, `iss_001`) in §1 stand exactly as written — `id` is NOT forced to a UUID.
+  - JSON column defaults must be a scalar literal — the API rejects `default: []`.
+    So `related_ids` / `linked_prs` have no column default; callers write `[]`
+    explicitly on insert (ingest already does). File search can also 500
+    transiently while a doc is mid-indexing — poll/retry, don't fail on first error.

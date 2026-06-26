@@ -98,12 +98,12 @@ forge/
 ## ☐ DAY 1 — June 25 PM · Spine (🟢 PARALLEL after Phase 0)
 
 ### Lane A — Lemma pod + ingestion
-- [ ] **[A]** Install Lemma SDK, `Pod.from_env()` connects. — commit: `feat(pod): bootstrap pod connection`
-- [ ] **[A]** Define `issues` Table per contract. — commit: `feat(pod): add issues table`
-- [ ] **[A]** Smoke: create a record + read it back. — commit: `test(pod): issues table round-trip`
-- [ ] **[A]** Write a Markdown File + `files.search("HYBRID")` returns it. — commit: `feat(pod): verify hybrid file search`
-- [x] **[A]** `github_fetch` Function: pull open issues from a public repo via PAT. — commit: `feat(fn): github_fetch issues` _(verified live: 15 open issues from cli/cli)_
-- [ ] **[A]** Map fetched issues → `issues` rows + write bodies to Files. — commit: `feat(ingest): github issues into table+files`
+- [x] **[A]** Install Lemma SDK, `Pod.from_env()` connects. — commit: `feat(pod): bootstrap pod connection` _(live: pod `forge` 019f01ec…)_
+- [x] **[A]** Define `issues` Table per contract. — commit: `feat(pod): add issues table` _(12 cols incl. system created_at/updated_at; custom string `id` PK)_
+- [x] **[A]** Smoke: create a record + read it back. — commit: `test(pod): issues table round-trip`
+- [x] **[A]** Write a Markdown File + `files.search("HYBRID")` returns it. — commit: `feat(pod): verify hybrid file search`
+- [x] **[A]** `github_fetch` Function: pull open issues from a public repo via PAT. — commit: `feat(fn): github_fetch issues` _(verified live: open issues from cli/cli)_
+- [x] **[A]** Map fetched issues → `issues` rows + write bodies to Files. — commit: `feat(ingest): github issues into table+files` _(16 rows + 16 files; idempotent re-run)_
 
 ### Lane B — App skeleton (🟢 against mock data, no dependency on A)
 - [ ] **[B]** Init Lemma App (single-file HTML or React per SDK docs); it serves. — commit: `feat(app): bootstrap lemma app`
