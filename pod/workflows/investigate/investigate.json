@@ -46,11 +46,24 @@
         }
       }
     },
+    {
+      "id": "similar",
+      "type": "FUNCTION",
+      "label": "Find similar past issues",
+      "config": {
+        "function_name": "find_similar_evidence",
+        "input_mapping": {
+          "issue_id": { "type": "expression", "value": "intake.issue_id" },
+          "limit": { "type": "literal", "value": 3 }
+        }
+      }
+    },
     { "id": "end", "type": "END", "label": "Done" }
   ],
   "edges": [
     { "id": "e_intake_analyze", "source": "intake", "target": "analyze" },
     { "id": "e_analyze_commits", "source": "analyze", "target": "commits" },
-    { "id": "e_commits_end", "source": "commits", "target": "end" }
+    { "id": "e_commits_similar", "source": "commits", "target": "similar" },
+    { "id": "e_similar_end", "source": "similar", "target": "end" }
   ]
 }

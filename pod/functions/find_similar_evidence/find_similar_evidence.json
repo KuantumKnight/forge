@@ -1,0 +1,25 @@
+{
+  // D4 box 4 — similar past issues as investigation evidence. Same HYBRID
+  // /issues search as find_similar, but resolves each match to evidence with a
+  // real, clickable URL: a GitHub issue link for github-source matches, else a
+  // deep-link to the report file. (Sibling of find_similar because function
+  // output schemas are immutable after create — D-013.)
+  "name": "find_similar_evidence",
+  "description": "Find issues similar to a given one (HYBRID /issues search) and return them as evidence with clickable URLs — GitHub issue links for github matches, report-file links otherwise.",
+  "type": "API",
+  "code": { "$file": "code.py" },
+  "permissions": {
+    "grants": [
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "issues",
+        "permission_ids": ["datastore.table.read", "datastore.record.read"]
+      },
+      {
+        "resource_type": "folder",
+        "resource_name": "/issues",
+        "permission_ids": ["folder.read"]
+      }
+    ]
+  }
+}
