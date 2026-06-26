@@ -265,6 +265,27 @@
     }
     .investigation-step.done .step-dot { background: var(--norm); }
     .investigation-step.pending { color: var(--mute); }
+    .evidence-grid {
+      display: grid; gap: var(--s2);
+    }
+    .evidence-card {
+      display: grid; gap: 3px;
+      background: var(--panel-2); border: 1px solid var(--edge);
+      border-radius: var(--r); padding: 11px 12px;
+      color: var(--text); text-decoration: none;
+      transition: border-color .14s ease, transform .14s ease;
+    }
+    .evidence-card:hover, .evidence-card:focus-visible {
+      border-color: var(--quench); transform: translateX(2px); outline: none;
+    }
+    .evidence-type {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--quench);
+    }
+    .evidence-label {
+      color: var(--text-2); font-size: 13px;
+      overflow-wrap: anywhere;
+    }
     .detail {
       position: relative; overflow: hidden;
       background: var(--panel); border: 1px solid var(--edge);
@@ -464,6 +485,12 @@
       });
     }
 
+    function safeUrl(url) {
+      const value = String(url || "");
+      if (/^(https?:\/\/|\/|#)/.test(value)) return value;
+      return "#";
+    }
+
     // Critical-first ordering. Lower rank = higher up the queue; untriaged sinks
     // to the bottom. Ties broken by most-recently-updated.
     const PRIORITY_RANK = { critical: 0, high: 1, normal: 2, low: 3 };
@@ -651,6 +678,62 @@
       );
     }
 
+    function githubIssueUrl(issue) {
+      if (issue && issue.source === "github" && issue.external_id) {
+        return "https://github.com/cli/cli/issues/" + encodeURIComponent(issue.external_id);
+      }
+      return "#" + encodeURIComponent(issue && issue.id ? issue.id : "issue");
+    }
+
+    function mockEvidenceForIssue(issue) {
+      const related = (Array.isArray(issue.related_ids) ? issue.related_ids : [])
+        .map(findIssue)
+        .filter(Boolean)
+        .slice(0, 2);
+      const evidence = [
+        {
+          type: "issue",
+          label: issue.id + ": " + issue.title,
+          url: githubIssueUrl(issue),
+        },
+        {
+          type: "file",
+          label: "/issues/" + issue.id + ".md",
+          url: "/issues/" + encodeURIComponent(issue.id) + ".md",
+        },
+      ];
+      related.forEach(function (item) {
+        evidence.push({
+          type: "issue",
+          label: item.id + ": " + item.title,
+          url: githubIssueUrl(item),
+        });
+      });
+      return evidence.slice(0, 3);
+    }
+
+    function renderEvidenceCards(investigation) {
+      const evidence = investigation && Array.isArray(investigation.evidence)
+        ? investigation.evidence
+        : [];
+      if (!evidence.length) return "";
+      return (
+        '<section class="detail-section">' +
+          "<h2>Evidence</h2>" +
+          '<div class="evidence-grid">' +
+            evidence.map(function (item) {
+              return (
+                '<a class="evidence-card" href="' + escapeHtml(safeUrl(item.url)) + '" target="_blank" rel="noreferrer">' +
+                  '<span class="evidence-type">' + escapeHtml(item.type || "evidence") + "</span>" +
+                  '<span class="evidence-label">' + escapeHtml(item.label || item.url || "Evidence link") + "</span>" +
+                "</a>"
+              );
+            }).join("") +
+          "</div>" +
+        "</section>"
+      );
+    }
+
     function renderDetail(issue) {
       const key = issue.priority || "untriaged";
       const investigation = AppState.investigations[issue.id] || { status: "idle" };
@@ -686,6 +769,7 @@
             "<h2>Related reports</h2>" +
             renderRelatedList(issue) +
           "</section>" +
+          renderEvidenceCards(investigation) +
         "</article>";
       document.getElementById("back-to-queue").addEventListener("click", function () {
         AppState.selectedId = null;
@@ -714,6 +798,8 @@
         const run = await DataSource.triggerInvestigation(issue);
         AppState.investigations[issueId] = Object.assign(AppState.investigations[issueId], run, {
           phase: "evidence",
+          status: run.mode === "mock" ? "complete" : "running",
+          evidence: run.mode === "mock" ? mockEvidenceForIssue(issue) : [],
         });
       } catch (err) {
         AppState.investigations[issueId] = {
