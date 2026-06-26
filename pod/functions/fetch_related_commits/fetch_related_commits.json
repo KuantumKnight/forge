@@ -1,0 +1,12 @@
+{
+  // D4 box 3 — related recent commits. Hits the PUBLIC GitHub commits API for
+  // the repo (cli/cli) and ranks recent commits by overlap with the issue's
+  // keywords, returning the top few as evidence with real html_url links. No
+  // secret in the function: public repo needs no token (PAT optional via config
+  // only to lift the rate limit). No pod grants — outbound HTTP only.
+  "name": "fetch_related_commits",
+  "description": "Rank recent commits in the repo by keyword overlap with an issue and return the top few as evidence (real GitHub commit URLs). Public API; no auth required.",
+  "type": "API",
+  "code": { "$file": "code.py" },
+  "permissions": { "grants": [] }
+}

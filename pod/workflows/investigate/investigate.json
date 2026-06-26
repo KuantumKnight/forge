@@ -34,10 +34,23 @@
         }
       }
     },
+    {
+      "id": "commits",
+      "type": "FUNCTION",
+      "label": "Find related commits",
+      "config": {
+        "function_name": "fetch_related_commits",
+        "input_mapping": {
+          "keywords": { "type": "expression", "value": "analyze.keywords" },
+          "limit": { "type": "literal", "value": 3 }
+        }
+      }
+    },
     { "id": "end", "type": "END", "label": "Done" }
   ],
   "edges": [
     { "id": "e_intake_analyze", "source": "intake", "target": "analyze" },
-    { "id": "e_analyze_end", "source": "analyze", "target": "end" }
+    { "id": "e_analyze_commits", "source": "analyze", "target": "commits" },
+    { "id": "e_commits_end", "source": "commits", "target": "end" }
   ]
 }
