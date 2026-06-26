@@ -175,6 +175,27 @@
       margin: 0; font-size: 14px;
     }
     .detail-empty { color: var(--text-mute); font-size: 13px; margin: 0; }
+    .related-list {
+      display: flex; flex-direction: column; gap: var(--space-2);
+      margin: 0; padding: 0; list-style: none;
+    }
+    .related-link {
+      width: 100%; display: flex; align-items: center; gap: var(--space-2);
+      background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 9px 10px; cursor: pointer; text-align: left; font: inherit;
+    }
+    .related-link:hover, .related-link:focus-visible {
+      border-color: var(--accent); outline: none;
+    }
+    .related-link .rel-title {
+      flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; font-size: 13px;
+    }
+    .related-link .rel-id {
+      font-family: var(--mono); font-size: 11px; color: var(--text-mute);
+      white-space: nowrap;
+    }
 
     footer { margin-top: var(--space-8); color: var(--text-mute); font-size: 12px; text-align: center; }
     footer code { font-family: var(--mono); color: var(--text-2); }
@@ -360,6 +381,25 @@
       return AppState.issues.find(function (issue) { return String(issue.id) === String(id); });
     }
 
+    function renderRelatedList(issue) {
+      const ids = Array.isArray(issue.related_ids) ? issue.related_ids : [];
+      if (!ids.length) return '<p class="detail-empty">No confirmed related issues yet.</p>';
+      return (
+        '<ul class="related-list">' +
+        ids.map(function (id) {
+          const related = findIssue(id);
+          const title = related ? related.title : "Related issue not loaded";
+          return (
+            '<li><button type="button" class="related-link" data-related-id="' + escapeHtml(id) + '">' +
+              '<span class="rel-title">' + escapeHtml(title) + "</span>" +
+              '<span class="rel-id">' + escapeHtml(id) + "</span>" +
+            "</button></li>"
+          );
+        }).join("") +
+        "</ul>"
+      );
+    }
+
     function renderDetail(issue) {
       const key = issue.priority || "untriaged";
       const repro = issue.repro_steps
@@ -382,10 +422,19 @@
             "<h2>Repro Steps</h2>" +
             repro +
           "</section>" +
+          '<section class="detail-section">' +
+            "<h2>Related Issues</h2>" +
+            renderRelatedList(issue) +
+          "</section>" +
         "</article>";
       document.getElementById("back-to-queue").addEventListener("click", function () {
         AppState.selectedId = null;
         renderQueue(AppState.issues);
+      });
+      document.querySelectorAll("[data-related-id]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          selectIssue(button.getAttribute("data-related-id"));
+        });
       });
     }
 
