@@ -1,0 +1,23 @@
+{
+  // D3 Lane A box 1 — similarity search. Given an issue, HYBRID-search the
+  // /issues file corpus (built-in RAG) and return the top-K most similar OTHER
+  // issues as dedup candidates. Read-only: grants /issues:read + issues:read.
+  "name": "find_similar",
+  "description": "Find the top-K issues most similar to a given issue via HYBRID file search over /issues (excludes the issue itself). Returns ranked {id, score, title} candidates for duplicate confirmation.",
+  "type": "API",
+  "code": { "$file": "code.py" },
+  "permissions": {
+    "grants": [
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "issues",
+        "permission_ids": ["datastore.table.read", "datastore.record.read"]
+      },
+      {
+        "resource_type": "folder",
+        "resource_name": "/issues",
+        "permission_ids": ["folder.read"]
+      }
+    ]
+  }
+}

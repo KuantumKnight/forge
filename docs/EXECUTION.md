@@ -139,7 +139,7 @@ forge/
 ## ☐ DAY 3 — June 27 · Queue + dedup (🟢 PARALLEL)
 
 ### Lane A — Duplicate detection
-- [ ] **[A]** On new issue, `files.search(text, "HYBRID")` top-5. — commit: `feat(pod): similarity search on ingest`
+- [x] **[A]** On new issue, `files.search(text, "HYBRID")` top-5. — commit: `feat(pod): similarity search on ingest` _(API fn `pod/functions/find_similar`, granted `issues:read` + `/issues:read`: HYBRID `files.search` over `/issues`, maps chunk paths→ids, drops self, keeps each candidate's best chunk, returns ranked top-K {id,score,title}. Verified live: `find_similar(iss_003)` → top candidate `gh_142` (correct partner).)_
 - [ ] **[A]** Single LLM YES/NO confirm step for the top hit. — commit: `feat(agent): duplicate confirmation`
 - [ ] **[A]** Write confirmed matches to `related_ids` on both rows. — commit: `feat(pod): link related issues`
 - [ ] **[A]** Verify against the known dup pairs in seed data. — commit: `test(pod): dedup catches seeded duplicates`
