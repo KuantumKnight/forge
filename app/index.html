@@ -71,6 +71,34 @@
       font-size: 13px;
     }
 
+    /* ---- Filters ---- */
+    .filters {
+      display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3);
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-4);
+      border-bottom: 1px solid var(--border);
+    }
+    .filter-group {
+      display: flex; align-items: center; gap: var(--space-2);
+      font-family: var(--mono); font-size: 11px; color: var(--text-mute);
+    }
+    .filter-group select {
+      color: var(--text); background: var(--surface-1);
+      border: 1px solid var(--border-strong); border-radius: 8px;
+      padding: 7px 28px 7px 10px; font: inherit; cursor: pointer;
+    }
+    .filter-group select:focus-visible {
+      border-color: var(--accent); outline: none;
+    }
+    .clear-btn {
+      font: inherit; font-size: 12px; color: var(--text-2);
+      background: transparent; border: 1px solid var(--border-strong);
+      border-radius: 8px; padding: 7px 10px; cursor: pointer;
+    }
+    .clear-btn:hover, .clear-btn:focus-visible {
+      color: var(--text); border-color: var(--accent); outline: none;
+    }
+
     /* ---- Queue ---- */
     .queue { display: flex; flex-direction: column; gap: var(--space-3); }
     .card {
@@ -318,7 +346,7 @@
     // Critical-first ordering. Lower rank = higher up the queue; untriaged sinks
     // to the bottom. Ties broken by most-recently-updated.
     const PRIORITY_RANK = { critical: 0, high: 1, normal: 2, low: 3 };
-    const AppState = { issues: [], selectedId: null };
+    const AppState = { issues: [], selectedId: null, filters: { priority: "all", source: "all" } };
 
     function priorityRank(p) {
       return p && p in PRIORITY_RANK ? PRIORITY_RANK[p] : 99;
@@ -328,6 +356,15 @@
         const r = priorityRank(a.priority) - priorityRank(b.priority);
         if (r !== 0) return r;
         return String(b.updated_at || "").localeCompare(String(a.updated_at || ""));
+      });
+    }
+
+    function applyFilters(issues) {
+      return issues.filter(function (issue) {
+        const priority = issue.priority || "untriaged";
+        const source = issue.source || "unknown";
+        return (AppState.filters.priority === "all" || AppState.filters.priority === priority) &&
+          (AppState.filters.source === "all" || AppState.filters.source === source);
       });
     }
 
@@ -366,14 +403,71 @@
     }
 
     function renderQueue(issues) {
-      const ordered = sortCriticalFirst(issues);
+      const filtered = applyFilters(issues);
+      const ordered = sortCriticalFirst(filtered);
       const main = document.getElementById("main");
       main.innerHTML =
-        '<div class="queue">' + ordered.map(issueCard).join("") + "</div>";
+        renderFilters() +
+        (ordered.length
+          ? '<div class="queue">' + ordered.map(issueCard).join("") + "</div>"
+          : '<div class="state"><div class="glyph">∅</div><h2>No matches</h2><p>Adjust the priority or source filter.</p></div>');
+      bindFilters();
       main.querySelectorAll(".card[data-id]").forEach(function (card) {
         card.addEventListener("click", function () {
           selectIssue(card.getAttribute("data-id"));
         });
+      });
+    }
+
+    function selectOption(value, label, current) {
+      return '<option value="' + escapeHtml(value) + '"' +
+        (value === current ? " selected" : "") + ">" + escapeHtml(label) + "</option>";
+    }
+
+    function renderFilters() {
+      const p = AppState.filters.priority;
+      const s = AppState.filters.source;
+      return (
+        '<div class="filters" aria-label="Queue filters">' +
+          '<label class="filter-group">Priority ' +
+            '<select id="priority-filter">' +
+              selectOption("all", "All", p) +
+              selectOption("critical", "Critical", p) +
+              selectOption("high", "High", p) +
+              selectOption("normal", "Normal", p) +
+              selectOption("low", "Low", p) +
+              selectOption("untriaged", "Untriaged", p) +
+            "</select>" +
+          "</label>" +
+          '<label class="filter-group">Source ' +
+            '<select id="source-filter">' +
+              selectOption("all", "All", s) +
+              selectOption("github", "GitHub", s) +
+              selectOption("slack", "Slack", s) +
+              selectOption("email", "Email", s) +
+            "</select>" +
+          "</label>" +
+          '<button type="button" class="clear-btn" id="clear-filters">Clear</button>' +
+        "</div>"
+      );
+    }
+
+    function bindFilters() {
+      const priority = document.getElementById("priority-filter");
+      const source = document.getElementById("source-filter");
+      const clear = document.getElementById("clear-filters");
+      priority.addEventListener("change", function () {
+        AppState.filters.priority = priority.value;
+        renderQueue(AppState.issues);
+      });
+      source.addEventListener("change", function () {
+        AppState.filters.source = source.value;
+        renderQueue(AppState.issues);
+      });
+      clear.addEventListener("click", function () {
+        AppState.filters.priority = "all";
+        AppState.filters.source = "all";
+        renderQueue(AppState.issues);
       });
     }
 
