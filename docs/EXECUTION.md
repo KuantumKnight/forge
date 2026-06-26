@@ -165,7 +165,7 @@ forge/
 - [ ] **[A]** Cap to 3 evidence sources; ensure <15s typical. — commit: `perf(wf): cap evidence sources`
 
 ### Lane B — Investigation UI
-- [ ] **[B]** "Investigate" button on detail view → triggers workflow run. — commit: `feat(app): trigger investigation`
+- [x] **[B]** "Investigate" button on detail view → triggers workflow run. — commit: `feat(app): trigger investigation` _(detail view has an Investigate action wired to `DataSource.triggerInvestigation`; live mode attempts the Lemma `investigate` workflow API when exposed, mock mode records a deterministic run id so Lane B can build ahead. Inline script parse check PASS.)_
 - [ ] **[B]** Progress/steps indicator while running. — commit: `feat(app): investigation progress view`
 - [ ] **[B]** Evidence cards with clickable commit/issue links. — commit: `feat(app): evidence cards with links`
 - [ ] **[B]** Hypothesis summary block (no fake %, evidence only). — commit: `feat(app): root-cause summary`

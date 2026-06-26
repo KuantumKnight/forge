@@ -218,6 +218,24 @@
       border-radius: var(--r); padding: 8px 13px; cursor: pointer;
     }
     .back-btn:hover, .back-btn:focus-visible { color: var(--text); border-color: var(--quench); outline: none; }
+    .detail-actions {
+      display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3);
+      margin: calc(-1 * var(--s2)) 0 var(--s5);
+    }
+    .investigate-btn {
+      font: inherit; font-size: 11px; font-weight: 750;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--crit-ink); background: var(--high);
+      border: 1px solid var(--high); border-radius: var(--r);
+      padding: 9px 14px; cursor: pointer;
+      box-shadow: 0 0 16px rgba(255,157,46,0.18);
+    }
+    .investigate-btn:hover, .investigate-btn:focus-visible {
+      background: #ffad4f; outline: none;
+    }
+    .investigate-btn[disabled] {
+      cursor: default; opacity: .72; box-shadow: none;
+    }
     .detail {
       position: relative; overflow: hidden;
       background: var(--panel); border: 1px solid var(--edge);
@@ -386,6 +404,29 @@
         if (!res.ok) throw new Error("could not load seed/issues.json (" + res.status + ")");
         return res.json();
       },
+
+      async triggerInvestigation(issue) {
+        if (this.mode === "live" && this.client && this.client.workflows) {
+          const workflows = this.client.workflows;
+          if (typeof workflows.createRun === "function") {
+            const run = await workflows.createRun("investigate");
+            const runId = run && (run.id || run.run_id);
+            if (typeof workflows.submitForm === "function") {
+              await workflows.submitForm(runId, { issue_id: issue.id });
+            }
+            return { mode: "live", run_id: runId || null };
+          }
+          if (typeof workflows.create_run === "function") {
+            const run = await workflows.create_run("investigate");
+            const runId = run && (run.id || run.run_id);
+            if (typeof workflows.submit_form === "function") {
+              await workflows.submit_form(runId, "issue_form", { issue_id: issue.id });
+            }
+            return { mode: "live", run_id: runId || null };
+          }
+        }
+        return { mode: "mock", run_id: "mock-" + issue.id };
+      },
     };
 
     function escapeHtml(s) {
@@ -397,7 +438,12 @@
     // Critical-first ordering. Lower rank = higher up the queue; untriaged sinks
     // to the bottom. Ties broken by most-recently-updated.
     const PRIORITY_RANK = { critical: 0, high: 1, normal: 2, low: 3 };
-    const AppState = { issues: [], selectedId: null, filters: { priority: "all", source: "all" } };
+    const AppState = {
+      issues: [],
+      selectedId: null,
+      filters: { priority: "all", source: "all" },
+      investigations: {},
+    };
 
     function priorityRank(p) {
       return p && p in PRIORITY_RANK ? PRIORITY_RANK[p] : 99;
@@ -547,6 +593,8 @@
 
     function renderDetail(issue) {
       const key = issue.priority || "untriaged";
+      const investigation = AppState.investigations[issue.id] || { status: "idle" };
+      const investigating = investigation.status === "running";
       const repro = issue.repro_steps
         ? '<p class="detail-text">' + escapeHtml(issue.repro_steps) + "</p>"
         : '<p class="detail-empty">No repro steps captured yet.</p>';
@@ -558,6 +606,12 @@
             sourceBadge(issue.source) +
             '<span class="id">' + escapeHtml(issue.id) + "</span>" +
             '<span class="badge p-' + key + '">' + escapeHtml(key) + "</span>" +
+          "</div>" +
+          '<div class="detail-actions">' +
+            '<button type="button" class="investigate-btn" id="investigate-issue"' +
+              (investigating ? " disabled" : "") + ">" +
+              (investigating ? "Investigating" : "Investigate") +
+            "</button>" +
           "</div>" +
           '<section class="detail-section">' +
             "<h2>Report</h2>" +
@@ -576,11 +630,31 @@
         AppState.selectedId = null;
         renderQueue(AppState.issues);
       });
+      document.getElementById("investigate-issue").addEventListener("click", function () {
+        startInvestigation(issue.id);
+      });
       document.querySelectorAll("[data-related-id]").forEach(function (button) {
         button.addEventListener("click", function () {
           selectIssue(button.getAttribute("data-related-id"));
         });
       });
+    }
+
+    async function startInvestigation(issueId) {
+      const issue = findIssue(issueId);
+      if (!issue) return;
+      AppState.investigations[issueId] = { status: "running", started_at: new Date().toISOString() };
+      renderDetail(issue);
+      try {
+        const run = await DataSource.triggerInvestigation(issue);
+        AppState.investigations[issueId] = Object.assign(AppState.investigations[issueId], run);
+      } catch (err) {
+        AppState.investigations[issueId] = {
+          status: "error",
+          message: (err && err.message) || "Investigation could not start.",
+        };
+      }
+      renderDetail(issue);
     }
 
     function selectIssue(id) {
