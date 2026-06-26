@@ -61,28 +61,35 @@ def _run_confirm(pod, a: dict, b: dict, timeout_s: int = 120, poll_s: float = 3.
     return _extract_output(messages)
 
 
-def dedup_one(pod, issue_id: str, min_score: float = 0.0) -> dict:
-    """Find the top similar issue, confirm with the LLM, link if duplicate."""
+def dedup_one(pod, issue_id: str, min_score: float = 0.0, max_confirm: int = 3) -> dict:
+    """Find similar issues, confirm candidates with the LLM, link the first duplicate.
+
+    HYBRID ranking is rank-based and not always perfectly ordered — a semantically
+    identical report in very different words (e.g. iss_025 "gh stops working every
+    afternoon" vs gh_158 "401 after SSO session expiry") can sit behind a weaker
+    lexical match. So we walk the top ``max_confirm`` candidates and let
+    ``dedup_confirm`` (which errs toward NO) be the gate, instead of trusting rank #1
+    alone. The first confirmed duplicate is linked; non-duplicates are rejected.
+    """
     issue = pod.records.get(TABLE_NAME, issue_id)
     sim = _fn_output(pod.functions.run(FIND_FN, {"issue_id": issue_id, "top_k": 5}))
-    candidates = (sim or {}).get("candidates", [])
+    candidates = [c for c in (sim or {}).get("candidates", []) if c["score"] >= min_score]
     if not candidates:
         return {"issue_id": issue_id, "linked": None, "reason": "no similar candidates"}
 
-    top = candidates[0]
-    if top["score"] < min_score:
-        return {"issue_id": issue_id, "candidate": top["id"], "linked": None,
-                "reason": f"top score {top['score']:.3f} below floor {min_score}"}
+    checked = []
+    for cand in candidates[:max_confirm]:
+        other = pod.records.get(TABLE_NAME, cand["id"])
+        verdict = _run_confirm(pod, issue, other)
+        checked.append(cand["id"])
+        if verdict.get("is_duplicate"):
+            link = _fn_output(pod.functions.run(LINK_FN, {"id_a": issue_id, "id_b": cand["id"]}))
+            return {"issue_id": issue_id, "candidate": cand["id"], "linked": cand["id"],
+                    "reason": verdict.get("reason"), "link": link, "checked": checked}
 
-    other = pod.records.get(TABLE_NAME, top["id"])
-    verdict = _run_confirm(pod, issue, other)
-    if not verdict.get("is_duplicate"):
-        return {"issue_id": issue_id, "candidate": top["id"], "linked": None,
-                "reason": verdict.get("reason")}
-
-    link = _fn_output(pod.functions.run(LINK_FN, {"id_a": issue_id, "id_b": top["id"]}))
-    return {"issue_id": issue_id, "candidate": top["id"], "linked": top["id"],
-            "reason": verdict.get("reason"), "link": link}
+    return {"issue_id": issue_id, "candidate": candidates[0]["id"], "linked": None,
+            "reason": f"no duplicate among top {len(checked)} ({', '.join(checked)})",
+            "checked": checked}
 
 
 def _feedback_ids(pod) -> list[str]:

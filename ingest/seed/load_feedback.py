@@ -86,7 +86,8 @@ def write_seed_feedback(pod, rows: Iterable[dict]) -> dict:
             pod.records.create(TABLE_NAME, payload)
             created += 1
         except LemmaConflictError:
-            pod.records.update(TABLE_NAME, rid, payload)
+            # The primary key can't be modified — send everything but `id`.
+            pod.records.update(TABLE_NAME, rid, {k: v for k, v in payload.items() if k != "id"})
             updated += 1
         pod.files.write_text(f"/issues/{rid}.md", f"# {payload['title']}\n\n{payload['body']}")
     return {"created": created, "updated": updated}

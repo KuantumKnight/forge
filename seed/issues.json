@@ -4,7 +4,7 @@
     "source": "github",
     "external_id": "142",
     "title": "Panic on `gh pr create` when repo has no upstream remote",
-    "body": "Running `gh pr create` in a freshly cloned fork with no `upstream` configured crashes with a nil pointer dereference instead of a helpful error.\n\n```\npanic: runtime error: invalid memory address or nil pointer dereference\n  github.com/cli/cli/v2/pkg/cmd/pr/create.determineBaseRepo(...)\n```\n\nExpected: a clear message asking me to set an upstream, not a stack trace.",
+    "body": "Running `gh pr create` in a freshly cloned fork with no `upstream` configured crashes with a nil pointer dereference instead of a helpful error.\n\n```\npanic: runtime error: invalid memory address or nil pointer dereference\n  github.com/cli/cli/v2/pkg/cmd/pr/create.getRemotes(...)\n      pkg/cmd/pr/create/create.go\n```\n\nExpected: a clear message asking me to set an upstream, not a stack trace.",
     "priority": "critical",
     "repro_steps": "- Fork a repo and clone your fork\n- Do NOT add an `upstream` remote\n- Run `gh pr create`\n- Observe the panic / nil pointer dereference",
     "status": "triaged",
@@ -36,7 +36,7 @@
     "priority": "critical",
     "repro_steps": "- `gh auth login` with an org that enforces SSO\n- Wait for the SSO session to expire (~8 hours)\n- Run any command, e.g. `gh issue list`\n- Observe persistent `HTTP 401: Bad credentials`",
     "status": "triaged",
-    "related_ids": ["iss_007"],
+    "related_ids": ["iss_007", "iss_025"],
     "linked_prs": [],
     "created_at": "2026-06-20T08:00:00Z",
     "updated_at": "2026-06-24T12:30:00Z"
@@ -278,5 +278,19 @@
     "linked_prs": [],
     "created_at": "2026-06-23T11:30:00Z",
     "updated_at": "2026-06-24T10:45:00Z"
+  },
+  {
+    "id": "iss_025",
+    "source": "slack",
+    "external_id": null,
+    "title": "gh randomly stops working every afternoon, have to sign in again",
+    "body": "from #eng-help: \"is it just me or does gh just give up halfway through the day? every afternoon my commands start getting rejected and I have to log in all over again. it's like the CLI forgets who I am after a few hours. on the work laptop with the company sign-in if that matters.\"",
+    "priority": "high",
+    "repro_steps": "- Sign in to gh on a managed/work account in the morning\n- Use gh normally for several hours\n- In the afternoon commands start being rejected until you sign in again",
+    "status": "triaged",
+    "related_ids": ["gh_158"],
+    "linked_prs": [],
+    "created_at": "2026-06-25T15:30:00Z",
+    "updated_at": "2026-06-25T16:00:00Z"
   }
 ]
