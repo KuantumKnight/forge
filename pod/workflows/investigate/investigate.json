@@ -59,6 +59,18 @@
       }
     },
     {
+      "id": "source",
+      "type": "FUNCTION",
+      "label": "Ground symbol in real source",
+      "config": {
+        "function_name": "fetch_source_evidence",
+        "input_mapping": {
+          "issue_id": { "type": "expression", "value": "intake.issue_id" },
+          "keywords": { "type": "expression", "value": "analyze.keywords", "optional": true }
+        }
+      }
+    },
+    {
       "id": "synthesize",
       "type": "AGENT",
       "label": "Synthesize root-cause hypothesis",
@@ -70,7 +82,9 @@
           "has_trace": { "type": "expression", "value": "analyze.has_trace", "optional": true },
           "report_evidence": { "type": "expression", "value": "analyze.report_evidence", "optional": true },
           "commit_evidence": { "type": "expression", "value": "commits.commit_evidence", "optional": true },
-          "issue_evidence": { "type": "expression", "value": "similar.issue_evidence", "optional": true }
+          "issue_evidence": { "type": "expression", "value": "similar.issue_evidence", "optional": true },
+          "source_found": { "type": "expression", "value": "source.found", "optional": true },
+          "source_evidence": { "type": "expression", "value": "source.evidence", "optional": true }
         }
       }
     },
@@ -80,7 +94,8 @@
     { "id": "e_intake_analyze", "source": "intake", "target": "analyze" },
     { "id": "e_analyze_commits", "source": "analyze", "target": "commits" },
     { "id": "e_commits_similar", "source": "commits", "target": "similar" },
-    { "id": "e_similar_synth", "source": "similar", "target": "synthesize" },
+    { "id": "e_similar_source", "source": "similar", "target": "source" },
+    { "id": "e_source_synth", "source": "source", "target": "synthesize" },
     { "id": "e_synth_end", "source": "synthesize", "target": "end" }
   ]
 }

@@ -101,6 +101,10 @@ def investigate(pod, issue_id: str, timeout_s: int = 180, poll_s: float = 4.0) -
         "hypothesis": synth.get("hypothesis", ""),
         "evidence": synth.get("evidence", []),
     }
+    # D5 hero — carry the proposed fix (only present when the symbol was grounded
+    # in real source) so the app and backup samples can show the verifiable diff.
+    if synth.get("proposed_fix"):
+        result["proposed_fix"] = synth["proposed_fix"]
     _log_run(issue_id, result)
     return result
 
