@@ -122,6 +122,47 @@
     .card.p-untriaged{ border-left-color: var(--border-strong); }
     footer { margin-top: var(--space-8); color: var(--text-mute); font-size: 12px; text-align: center; }
     footer code { font-family: var(--mono); color: var(--text-2); }
+
+    /* ---- Loading skeletons (not spinners) ---- */
+    .skeleton {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--space-4);
+      display: flex; align-items: center; gap: var(--space-4);
+    }
+    .skeleton .sk-body { flex: 1; }
+    .sk-line { height: 12px; border-radius: 6px; background: var(--surface-2);
+      position: relative; overflow: hidden; }
+    .sk-line.lg { width: 60%; height: 15px; margin-bottom: 10px; }
+    .sk-line.sm { width: 30%; }
+    .sk-pill { width: 64px; height: 22px; border-radius: 999px; background: var(--surface-2); }
+    .sk-line::after, .sk-pill::after {
+      content: ""; position: absolute; inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+      animation: shimmer 1.2s infinite;
+    }
+    .sk-pill { position: relative; overflow: hidden; }
+    @keyframes shimmer { 100% { transform: translateX(100%); } }
+    @media (prefers-reduced-motion: reduce) {
+      .sk-line::after, .sk-pill::after { animation: none; }
+    }
+
+    /* ---- Empty / error states ---- */
+    .state { text-align: center; padding: var(--space-8) var(--space-4); color: var(--text-2); }
+    .state .glyph { font-size: 30px; line-height: 1; margin-bottom: var(--space-3); }
+    .state h2 { font-size: 16px; font-weight: 600; color: var(--text); margin: 0 0 var(--space-2); }
+    .state p { margin: 0 auto; max-width: 380px; font-size: 13px; color: var(--text-mute); }
+    .state.error .glyph { color: var(--critical); }
+    .state code { font-family: var(--mono); color: var(--text-2); font-size: 12px; }
+    .state button {
+      margin-top: var(--space-4); font: inherit; font-size: 13px;
+      color: var(--bg); background: var(--accent); border: 0;
+      padding: 8px 16px; border-radius: 8px; cursor: pointer;
+    }
+    .state button:hover { background: var(--accent-hover); }
   </style>
 </head>
 <body>
@@ -227,6 +268,36 @@
         '<div class="queue">' + ordered.map(issueCard).join("") + "</div>";
     }
 
+    function renderLoading() {
+      const row =
+        '<div class="skeleton"><div class="sk-body">' +
+        '<div class="sk-line lg"></div><div class="sk-line sm"></div>' +
+        '</div><div class="sk-pill"></div></div>';
+      document.getElementById("main").innerHTML =
+        '<div class="queue" aria-busy="true" aria-label="Loading issues">' +
+        row.repeat(6) + "</div>";
+    }
+
+    function renderEmpty() {
+      document.getElementById("main").innerHTML =
+        '<div class="state">' +
+          '<div class="glyph">✓</div>' +
+          "<h2>Queue is clear</h2>" +
+          "<p>No issues to triage right now. New GitHub issues and seeded " +
+          "Slack/email feedback will appear here automatically.</p>" +
+        "</div>";
+    }
+
+    function renderError(message) {
+      document.getElementById("main").innerHTML =
+        '<div class="state error">' +
+          '<div class="glyph">!</div>' +
+          "<h2>Couldn’t load the queue</h2>" +
+          "<p>" + escapeHtml(message) + "</p>" +
+          '<button type="button" onclick="boot()">Retry</button>' +
+        "</div>";
+    }
+
     function renderSourcePill() {
       const pill = document.getElementById("source-pill");
       const label = document.getElementById("source-label");
@@ -241,10 +312,20 @@
     }
 
     async function boot() {
-      await DataSource.init();
-      renderSourcePill();
-      const issues = await DataSource.listIssues();
-      renderQueue(issues);
+      renderLoading();
+      try {
+        await DataSource.init();
+        renderSourcePill();
+        const issues = await DataSource.listIssues();
+        if (!issues || issues.length === 0) {
+          renderEmpty();
+        } else {
+          renderQueue(issues);
+        }
+      } catch (err) {
+        console.error(err);
+        renderError((err && err.message) || "Unknown error.");
+      }
     }
 
     // Load the SDK from the injected API origin, then boot. If there is no
