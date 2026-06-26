@@ -14,6 +14,8 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
+from lemma_sdk import LemmaError  # noqa: E402
+
 from pod.lemma_client import get_pod  # noqa: E402
 
 PATH = "/issues/_smoke.md"
@@ -31,7 +33,13 @@ def main() -> int:
 
         deadline = time.time() + TIMEOUT_S
         while time.time() < deadline:
-            resp = pod.files.search(TOKEN, scope_path="/issues", search_method="HYBRID")
+            try:
+                resp = pod.files.search(TOKEN, scope_path="/issues", search_method="HYBRID")
+            except LemmaError:
+                # The search backend can 500 transiently while the doc is still
+                # indexing; keep polling until it settles or we time out.
+                time.sleep(POLL_S)
+                continue
             if any(item.path == PATH for item in resp.items):
                 top = next(item for item in resp.items if item.path == PATH)
                 print(f"PASS: HYBRID search found {PATH} (score={top.score}).")
