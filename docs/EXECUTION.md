@@ -157,7 +157,7 @@ forge/
 ## ☐ DAY 4 — June 28 · AI Investigation Workflow (the hero) (🟢 PARALLEL)
 
 ### Lane A — Investigate workflow
-- [ ] **[A]** Define `investigate` Workflow with a FORM node taking `issue_id`. — commit: `feat(wf): investigate workflow skeleton`
+- [x] **[A]** Define `investigate` Workflow with a FORM node taking `issue_id`. — commit: `feat(wf): investigate workflow skeleton` _(`pod/workflows/investigate`: MANUAL start, entry FORM `intake` (input_schema {issue_id}) → END. `lemma workflows validate` OK; ran live `--data {"issue_id":"gh_142"}` → COMPLETED. D-013 records the gather-functions + one-synthesis-agent design.)_
 - [ ] **[A]** Node: stack-trace / error reasoning over issue body. — commit: `feat(wf): stacktrace analysis node`
 - [ ] **[A]** Node: related recent commits via `github_fetch`. — commit: `feat(wf): related commits node`
 - [ ] **[A]** Node: similar past issues via Files search. — commit: `feat(wf): similar issues node`

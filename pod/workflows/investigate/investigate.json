@@ -1,0 +1,31 @@
+{
+  // D4 Lane A — the hero. The investigate workflow takes an issue_id and (in
+  // later boxes) gathers stack-trace signals, related commits, and similar past
+  // issues, then synthesizes a root-cause hypothesis with clickable evidence
+  // (contracts.md §5). Box 1 is the skeleton: a FORM that intakes issue_id ->
+  // END. The app triggers a run and submits issue_id to this entry form.
+  "name": "investigate",
+  "description": "Investigate one issue: gather stack-trace signals, related commits, and similar past issues, then synthesize a cited root-cause hypothesis (no confidence %, evidence only).",
+  "start": { "type": "MANUAL" },
+  "nodes": [
+    {
+      "id": "intake",
+      "type": "FORM",
+      "label": "Investigate which issue",
+      "config": {
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "issue_id": { "type": "string", "description": "Forge issue id, e.g. gh_142 / iss_003" }
+          },
+          "required": ["issue_id"]
+        },
+        "ui_schema": { "ui:order": ["issue_id"] }
+      }
+    },
+    { "id": "end", "type": "END", "label": "Done" }
+  ],
+  "edges": [
+    { "id": "e_intake_end", "source": "intake", "target": "end" }
+  ]
+}
