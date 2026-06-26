@@ -107,7 +107,7 @@ forge/
 
 ### Lane B — App skeleton (🟢 against mock data, no dependency on A)
 - [x] **[B]** Init Lemma App (single-file HTML or React per SDK docs); it serves. — commit: `feat(app): bootstrap lemma app` _(single-file HTML app `app/index.html`; SDK boot from injected `__LEMMA_CONFIG__`, graceful mock-mode fallback; serves 200 locally)_
-- [ ] **[B]** `seed/issues.json` ~20 items matching the contract (incl. dup pairs). — commit: `feat(seed): sample issues fixture`
+- [x] **[B]** `seed/issues.json` ~20 items matching the contract (incl. dup pairs). — commit: `feat(seed): sample issues fixture` _(20 items, exact contract §1 fields; 3 symmetric dup pairs via `related_ids` (gh_142↔iss_003, gh_158↔iss_007, gh_171↔iss_011); priority spread 3/5/5/4 + 2 null; github/slack/email sources)_
 - [ ] **[B]** Priority Queue screen renders cards from mock data (title, priority badge). — commit: `feat(app): priority queue from mock`
 - [ ] **[B]** Critical-first sort + priority color coding. — commit: `feat(app): sort and color by priority`
 - [ ] **[B]** Empty/loading states. — commit: `feat(app): queue loading and empty states`
