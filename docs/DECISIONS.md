@@ -92,5 +92,27 @@ any wasted complexity?" score and the hiring track's "how they scoped and defend
   - Any task >2× its estimate → stop, sync, re-scope.
 
 ### Open decisions (TBD)
-- Slack/Email: Surfaces vs seed — decide by end of D2.
-- Release Center: go/no-go — **RESOLVED D4: GO** (see D-014).
+- Slack/Email: Surfaces vs seed — **RESOLVED D2: seed** (deterministic demo, no live connector to authenticate on camera).
+- Release Center: go/no-go — **RESOLVED D5: SKIPPED** (D-014 GO reversed by D-015 — depth over breadth).
+
+---
+
+## Cut list — what we deliberately did NOT build, and why
+The 25% product-judgment score asks "any wasted complexity?" These are the things we
+scoped out on purpose; each bought focus or removed a failure mode, not capability we
+needed for the core loop (ingest → triage → dedup → investigate, shown in the app).
+
+| Cut | Why | What we did instead |
+|---|---|---|
+| **Release Center** (merged-PR fetch, `release_notes` agent, `prepare_release` workflow, release view) | D-015: a second feature area adds demo range but no new proof of capability; the verifiable investigation is the differentiator and deserved the whole day. | Deepened the hero — real source grounding + a proposed-fix diff you can verify. |
+| **Our own vector DB / Postgres / Redis / Qdrant** | Lemma Files auto-index + HYBRID search *is* the RAG + dedup engine. Running our own store would be parallel infra to maintain and explain. | `files.search(..., search_method="HYBRID")` over `/issues` (D-002). |
+| **Authenticated GitHub code search** (`/search/code`) for source grounding | Needs a token (the available PAT is empty) and is capped at 10 req/min — couples the hero to a secret and a rate limit. | Public, no-auth Git Trees + raw CDN: 2 API calls, uncapped CDN fetches, no secret (D-015). |
+| **Confidence percentages** on hypotheses | A fabricated number reads as rigor but isn't — judges (and engineers) distrust it. | Cite real evidence (clickable links + a real diff); say plainly when signals are thin (D-006). |
+| **Multi-repo support** | The demo is one repo (`cli/cli`); generality is config we'd never exercise on camera. | `default_repo` config on the GitHub functions — one line to change, zero abstraction tax. |
+| **Live webhook/Slack/email ingestion** | Real-time connectors need org auth set up live and are flaky to demo. | One live GitHub fetch shown on camera + deterministic seed for Slack/email (D-003). |
+| **Per-user RLS on `issues`** | Forge is one team's shared triage queue, not per-user data. | `issues` created with `enable_rls=False` — shared team table (D-001). |
+
+> Refinements (not cuts) made while hardening D5: dedup now walks the **top-K** similarity
+> candidates (was top-1) so a semantically-identical report in different words still links,
+> with `dedup_confirm` still the precision gate; and `load_feedback` no longer sends the PK
+> in update payloads (the backend now rejects it).

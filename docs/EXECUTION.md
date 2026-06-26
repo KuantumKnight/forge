@@ -194,12 +194,12 @@ forge/
 - [ ] **[B]** Release view: command/button → grouped notes, editable. — commit: `feat(app): release notes view`
 
 ### Regardless (hardening — both lanes)
-- [ ] **[A]** Error handling: agent fails → graceful fallback, no UI crash. — commit: `fix(pod): graceful agent failure`
-- [ ] **[A]** Finalize `scripts/smoke` covering the full loop. — commit: `test: full-loop smoke script`
-- [ ] **[B]** Curate the exact demo dataset (deterministic). — commit: `feat(seed): finalize demo dataset`
-- [ ] **[B]** UI polish: spacing, the one "screenshot" moment looks clean. — commit: `style(app): demo polish`
-- [ ] **[B]** Write `README.md` runbook (clone → run). — commit: `docs: add README runbook`
-- [ ] **[A+B]** Fill in `DECISIONS.md` cut-list + rationale. — commit: `docs: complete decision log`
+- [x] **[A]** Error handling: agent fails → graceful fallback, no UI crash. — commit: `fix(pod): graceful agent failure` _(app: a live run that returns no hypothesis (workflow failed/too slow, no backup) now resolves to a clean, **retryable** "investigation unavailable" state showing any evidence gathered — was an infinite spinner. Driver already swallows timeouts and returns a structured result rather than throwing.)_
+- [x] **[A]** Finalize `scripts/smoke` covering the full loop. — commit: `test: full-loop smoke script` _(`scripts/smoke.py` sequences connection → triage → dedup → dedup-in-app → investigate as subprocess stages, aggregates one PASS/FAIL; `--quick` skips the slow live investigate, `--only` runs a subset. ASCII-only output for cp1252 consoles.)_
+- [x] **[B]** Curate the exact demo dataset (deterministic). — commit: `feat(seed): finalize demo dataset` _(all 31 live issues now **triaged** (priority + repro on every row — DoD met); anchors gh_142↔iss_003 and the **3-source SSO cluster** gh_158↔{iss_007 email, iss_025 slack} hold; triaged the 4 leftover `new` rows incl. the gh_209↔iss_022 pair.)_
+- [x] **[B]** UI polish: spacing, the one "screenshot" moment looks clean. — commit: `style(app): demo polish` _(proposed-fix card gets a "verified" green left-accent tying it to the pill; redeployed to forge.apps.lemma.work.)_
+- [x] **[B]** Write `README.md` runbook (clone → run). — commit: `docs: add README runbook` _(summary + architecture updated to the verifiable-investigation hero (dropped the release-notes claim); added the full-loop run steps + the one-command `scripts/smoke.py` health check.)_
+- [x] **[A+B]** Fill in `DECISIONS.md` cut-list + rationale. — commit: `docs: complete decision log` _(added a 7-row **Cut list** — Release Center, own vector DB, authenticated code search, confidence %, multi-repo, live webhooks, per-user RLS — each with why + what-instead; resolved the open decisions.)_
 
 - [ ] 🔁 **[A+B] CHECKPOINT (EOD D5):** full loop stable; smoke PASS; **2 backup recordings exist.** — commit: `test: pre-submission smoke pass`
 

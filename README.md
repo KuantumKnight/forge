@@ -1,8 +1,9 @@
 # Forge — AI Bug Triage & Release Operator
 
 Turns messy engineering feedback (GitHub issues, Slack, email) into an organized, prioritized,
-de-duplicated issue queue, investigates the hard ones with an AI workflow that cites real evidence,
-and prepares release notes on command. Built entirely on the **Lemma SDK**.
+de-duplicated issue queue, then investigates the hard ones with an AI workflow that **grounds its
+root-cause hypothesis in the actual source** — it reads the real `cli/cli` code, cites the exact
+line, and proposes a fix as a diff you can click through and verify. Built entirely on the **Lemma SDK**.
 
 > Gappy AI National Hackathon · Powered by Lemma SDK · Team of 2 · June 24–30, 2026.
 > Product name: **Forge**. (Gappy AI is the organizer, not the product.)
@@ -19,16 +20,25 @@ and prepares release notes on command. Built entirely on the **Lemma SDK**.
 
 ## Architecture (one line)
 Lemma is the whole backend: **Tables** (structured issues), **Files** (auto-embedded, hybrid search =
-dedup + RAG, no vector DB), **Agents** (triage), **Workflows** (investigate, prepare_release),
-**Functions** (github_fetch), and an **App** (operator UI). No Postgres / Redis / Qdrant of our own.
+dedup + RAG, no vector DB), **Agents** (triage, dedup-confirm, investigate-synth), a **Workflow**
+(`investigate`: analyze → related commits → similar issues → **ground the symbol in real source** →
+synthesize), **Functions** (github_fetch, find_similar, fetch_source_evidence, …), and an **App**
+(operator UI). No Postgres / Redis / Qdrant of our own.
+
+## The hero — verifiable investigation
+Open a crashing bug → **Investigate**. The workflow parses the stack frame, finds the crashing symbol
+in the **real** repository (public GitHub tree + raw source — no fabrication; if the symbol isn't
+found it says so), and the synthesis agent writes a root-cause hypothesis plus a **proposed fix as a
+unified diff anchored to the actual lines**. The app renders a clickable `file:Lstart-Lend` citation
+that opens the real `cli/cli` source and the diff beside it. Evidence, not vibes — and you can check it.
 
 ## Repo layout
 ```
 pod/        agents/ workflows/ functions/ tables/   # Lemma Core  [Dev A]
 app/                                                 # Operator UI [Dev B]
-ingest/     github/                                  # GitHub fetch [A]
-seed/                                                # demo fixtures [B]
-scripts/    smoke                                    # full-loop health check
+ingest/     github/ seed/ triage/ dedup/ investigate # drivers: fetch + triage + dedup + investigate
+seed/                                                # demo fixtures + recorded investigation samples
+scripts/    smoke.py + per-stage smokes              # full-loop health check
 docs/                                                # PRD, EXECUTION, contracts, decisions
 ```
 
@@ -67,6 +77,23 @@ cp .env.example .env
 .venv/Scripts/python.exe ingest/github/ingest_issues.py     # real GitHub issues -> Table + Files
 ```
 After step 4 the `issues` Table holds real issues, each with its body at `/issues/{id}.md`.
+
+```bash
+# 5. Run the rest of the loop (each prints PASS/FAIL):
+.venv/Scripts/python.exe ingest/seed/load_feedback.py       # Slack/email feedback -> Table + Files
+.venv/Scripts/python.exe ingest/triage/run_triage.py        # AI triage: priority + repro on every issue
+.venv/Scripts/python.exe ingest/dedup/run_dedup.py          # find + confirm + link duplicates
+.venv/Scripts/python.exe ingest/investigate/run_investigate.py gh_142   # the hero: cited hypothesis + fix
+```
+
+### One-command health check
+`scripts/smoke.py` runs the whole loop (connection → triage → dedup → investigate) and prints a single
+PASS/FAIL — run it before any demo take:
+
+```bash
+.venv/Scripts/python.exe scripts/smoke.py            # full loop (incl. ~2–3 min live investigate runs)
+.venv/Scripts/python.exe scripts/smoke.py --quick    # skip the slow investigate stage (backup take covers it)
+```
 
 ## Connect to the live pod (Dev B)
 
