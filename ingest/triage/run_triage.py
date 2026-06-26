@@ -111,20 +111,51 @@ def triage_one(pod, issue_id: str) -> dict:
     return {"issue_id": issue_id, "verdict": verdict, "written": written}
 
 
+def list_untriaged(pod, limit: int = 200) -> list[dict]:
+    """All newly-ingested issues awaiting triage (status == 'new')."""
+    return pod.records.list(
+        TABLE_NAME,
+        limit=limit,
+        filter=[{"field": "status", "op": "eq", "value": "new"}],
+    ).to_dict().get("items", [])
+
+
+def triage_batch(pod) -> dict:
+    """Triage every newly-ingested issue. One failure never aborts the batch."""
+    pending = list_untriaged(pod)
+    print(f"triage batch: {len(pending)} new issue(s)")
+    ok = failed = 0
+    for issue in pending:
+        issue_id = issue["id"]
+        try:
+            res = triage_one(pod, issue_id)
+            w = res["written"] or {}
+            print(f"  [ok] {issue_id} -> {w.get('priority')} (coerced={w.get('coerced')})")
+            ok += 1
+        except Exception as exc:  # keep going; the row stays 'new' for a retry
+            print(f"  [skip] {issue_id}: {exc}")
+            failed += 1
+    return {"pending": len(pending), "triaged": ok, "failed": failed}
+
+
 def main() -> int:
     load_env()
-    if len(sys.argv) < 2:
-        print("usage: run_triage.py <issue_id>")
-        return 1
-    issue_id = sys.argv[1]
     pod = get_pod()
-    res = triage_one(pod, issue_id)
-    w = res["written"] or {}
+    if len(sys.argv) >= 2:
+        issue_id = sys.argv[1]
+        res = triage_one(pod, issue_id)
+        w = res["written"] or {}
+        print(
+            f"PASS: triaged {issue_id} -> priority={w.get('priority')} "
+            f"status={w.get('status')} coerced={w.get('coerced')}"
+        )
+        return 0
+    stats = triage_batch(pod)
     print(
-        f"PASS: triaged {issue_id} -> priority={w.get('priority')} "
-        f"status={w.get('status')} coerced={w.get('coerced')}"
+        f"PASS: batch triaged {stats['triaged']}/{stats['pending']} "
+        f"({stats['failed']} skipped)"
     )
-    return 0
+    return 0 if stats["failed"] == 0 else 1
 
 
 if __name__ == "__main__":
