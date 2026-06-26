@@ -158,7 +158,7 @@ forge/
 
 ### Lane A — Investigate workflow
 - [x] **[A]** Define `investigate` Workflow with a FORM node taking `issue_id`. — commit: `feat(wf): investigate workflow skeleton` _(`pod/workflows/investigate`: MANUAL start, entry FORM `intake` (input_schema {issue_id}) → END. `lemma workflows validate` OK; ran live `--data {"issue_id":"gh_142"}` → COMPLETED. D-013 records the gather-functions + one-synthesis-agent design.)_
-- [ ] **[A]** Node: stack-trace / error reasoning over issue body. — commit: `feat(wf): stacktrace analysis node`
+- [x] **[A]** Node: stack-trace / error reasoning over issue body. — commit: `feat(wf): stacktrace analysis node` _(`analyze_stacktrace` fn + FUNCTION node `analyze`: deterministic extraction of error_signature, has_trace, keywords (`gh pr create`, `upstream`), components (`create.determineBaseRepo`), and a real app-link to the report file. Granted issues:read + /issues:read. Verified standalone + as a workflow node on gh_142 → COMPLETED.)_
 - [ ] **[A]** Node: related recent commits via `github_fetch`. — commit: `feat(wf): related commits node`
 - [ ] **[A]** Node: similar past issues via Files search. — commit: `feat(wf): similar issues node`
 - [ ] **[A]** Synthesis node → `{hypothesis, evidence:[{type,label,url}]}` per contract. — commit: `feat(wf): synthesize root-cause hypothesis`

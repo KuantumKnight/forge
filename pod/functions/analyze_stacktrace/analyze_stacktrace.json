@@ -1,0 +1,24 @@
+{
+  // D4 box 2 — stack-trace / error analysis over the issue body. Deterministic
+  // extraction (no LLM): pull the error signature, search keywords, and named
+  // components out of the report, plus a clickable link to the originating
+  // report file. Feeds commit search + the synthesis agent.
+  "name": "analyze_stacktrace",
+  "description": "Extract the error signature, search keywords, and named components from an issue body, plus a link to the originating report. Deterministic — no LLM.",
+  "type": "API",
+  "code": { "$file": "code.py" },
+  "permissions": {
+    "grants": [
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "issues",
+        "permission_ids": ["datastore.table.read", "datastore.record.read"]
+      },
+      {
+        "resource_type": "folder",
+        "resource_name": "/issues",
+        "permission_ids": ["folder.read"]
+      }
+    ]
+  }
+}

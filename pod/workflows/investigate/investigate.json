@@ -23,9 +23,21 @@
         "ui_schema": { "ui:order": ["issue_id"] }
       }
     },
+    {
+      "id": "analyze",
+      "type": "FUNCTION",
+      "label": "Analyze error / stack trace",
+      "config": {
+        "function_name": "analyze_stacktrace",
+        "input_mapping": {
+          "issue_id": { "type": "expression", "value": "intake.issue_id" }
+        }
+      }
+    },
     { "id": "end", "type": "END", "label": "Done" }
   ],
   "edges": [
-    { "id": "e_intake_end", "source": "intake", "target": "end" }
+    { "id": "e_intake_analyze", "source": "intake", "target": "analyze" },
+    { "id": "e_analyze_end", "source": "analyze", "target": "end" }
   ]
 }
