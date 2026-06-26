@@ -107,21 +107,29 @@ flowchart TD
 | **Surfaces** | Slack + Gmail ingestion if time allows; otherwise seeded JSON into the same Table |
 | **App** | The operator UI (single-file HTML or React on pod APIs) |
 
-### Real SDK calls (not pseudocode — verified against the repo)
+### Real SDK calls
+> **Corrected 2026-06-26 against the installed `lemma-sdk==0.5.0`.** The block below
+> was originally guessed and was wrong in three places (import path, env vars,
+> `files.write`). The D1 lines (records / files / tables) are now verified by
+> running them live on pod `forge`. The D2+ lines (conversations / workflows) are
+> the documented shapes and will be confirmed when those days are built.
 ```python
-from lemma import Pod
-pod = Pod.from_env()
+from lemma_sdk import Pod          # NOT `from lemma import Pod`
+pod = Pod.from_env()               # reads LEMMA_TOKEN + LEMMA_POD_ID (or ~/.lemma CLI session)
 
+# --- VERIFIED D1 ---
 # Ingest: write a feedback item as a row + a searchable file
-pod.records.create("issues", data={"source": "github", "title": t, "body": b, "status": "new"})
-pod.files.write(path=f"/issues/{issue_id}.md", content=b)   # auto-indexed for search
+pod.records.create("issues", {"id": "gh_142", "source": "github", "title": t, "body": b,
+                              "status": "new", "related_ids": [], "linked_prs": []})
+pod.files.write_text(f"/issues/{issue_id}.md", f"# {t}\n\n{b}")   # `write_text`, not `write`; auto-indexed
 
+# Duplicate detection — no vector DB, this IS the feature (search is async; poll/retry):
+hits = pod.files.search(new_issue_text, scope_path="/issues", search_method="HYBRID")
+
+# --- D2+ shapes (confirm when building) ---
 # Triage: run the agent over a conversation
 conv = pod.conversations.create_for_agent("triage", title=f"Triage {issue_id}")
 pod.conversations.send(str(conv.to_dict()["id"]), f"Classify and write repro for issue {issue_id}")
-
-# Duplicate detection — no vector DB, this IS the feature:
-hits = pod.files.search(query=new_issue_text, search_method="HYBRID").to_dict()
 
 # Investigation as a workflow:
 run = pod.workflows.create_run("investigate").to_dict()

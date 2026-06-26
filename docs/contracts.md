@@ -10,18 +10,22 @@ telling the other person.
 
 | Field | Type | Notes |
 |---|---|---|
-| `id` | string (PK) | Forge-internal id, e.g. `iss_001` |
+| `id` | string (PK) | Forge-internal id. **Live scheme:** github → `gh_<number>` (e.g. `gh_142`); seeded chat → `iss_001`. This is the key Dev B's App references and that `related_ids` point at. |
 | `source` | enum | `github` \| `slack` \| `email` |
-| `external_id` | string | e.g. GitHub issue number `#142`; null for seeded chat |
+| `external_id` | string | GitHub issue number as a bare string, e.g. `"142"` (no `#`); null for seeded chat |
 | `title` | string | short summary |
 | `body` | text | full report text (also written to Files) |
 | `priority` | enum \| null | `critical` \| `high` \| `normal` \| `low`; null until triaged |
 | `repro_steps` | text (markdown) \| null | bullet list; null until triaged |
 | `status` | enum | `new` \| `triaged` \| `investigating` \| `resolved` |
-| `related_ids` | string[] | ids of confirmed duplicates / related issues |
-| `linked_prs` | string[] | PR identifiers that fix it (optional) |
-| `created_at` | ISO datetime | |
-| `updated_at` | ISO datetime | |
+| `related_ids` | string[] | ids of confirmed duplicates / related issues. No DB default — writers send `[]`. |
+| `linked_prs` | string[] | PR identifiers that fix it (optional). No DB default — writers send `[]`. |
+| `created_at` | ISO datetime | system-managed (auto) |
+| `updated_at` | ISO datetime | system-managed (auto) |
+
+> **Live now:** this table exists on pod `forge` (`019f01ec-5992-732f-b395-a2b29fc87254`),
+> seeded with 16 real `cli/cli` issues (`gh_*`). Dev B can read it directly — see the
+> README "Connect to the live pod" section.
 
 ## 2. Files convention (powers dedup + RAG)
 
