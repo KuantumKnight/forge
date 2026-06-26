@@ -148,7 +148,7 @@ forge/
 - [x] **[B]** "N related" badge on cards (reads `related_ids`). — commit: `feat(app): related count badge` _(cards read `related_ids` and show a compact `N related` badge only when the count is nonzero; inline script parse check PASS.)_
 - [x] **[B]** Related issues list inside detail view, clickable. — commit: `feat(app): related issues panel` _(detail view resolves `related_ids` against loaded issues and renders clickable related rows; selecting one opens that issue in-place. Inline script parse check PASS.)_
 - [x] **[B]** Filter by priority / source. — commit: `feat(app): queue filters` _(queue has priority and source selects plus a clear action; filters apply before critical-first sorting and persist when returning from detail view. Inline script parse check PASS.)_
-- [ ] **[B]** Start `docs/demo-script.md` (storyboard from PRD §7). — commit: `docs: draft demo script`
+- [x] **[B]** Start `docs/demo-script.md` (storyboard from PRD §7). — commit: `docs: draft demo script` _(expanded PRD §7 storyboard into a D3 rehearsal script with screen actions, voiceover, demo anchors, fallback notes, and timing.)_
 
 - [ ] 🔁 **[A+B] CHECKPOINT (EOD D3):** open a critical bug → see real "3 related"; first dry-run of demo steps 1–3. — commit: `test: dedup visible in app`
 
