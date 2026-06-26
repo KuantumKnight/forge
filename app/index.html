@@ -80,8 +80,11 @@
       padding: var(--space-4);
       display: flex; align-items: flex-start; gap: var(--space-4);
       transition: border-color .12s ease, background .12s ease;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
     }
-    .card:hover { border-color: var(--border-strong); background: var(--surface-2); }
+    .card:hover, .card:focus-visible { border-color: var(--border-strong); background: var(--surface-2); outline: none; }
     .card .body { flex: 1; min-width: 0; }
     .card .title {
       font-size: 15px; font-weight: 600; color: var(--text);
@@ -120,6 +123,48 @@
     .card.p-normal   { border-left-color: var(--normal); }
     .card.p-low      { border-left-color: var(--low); }
     .card.p-untriaged{ border-left-color: var(--border-strong); }
+
+    /* ---- Detail view ---- */
+    .toolbar { margin-bottom: var(--space-4); }
+    .back-btn {
+      font: inherit; font-size: 13px; color: var(--text-2);
+      background: transparent; border: 1px solid var(--border-strong);
+      border-radius: 8px; padding: 7px 12px; cursor: pointer;
+    }
+    .back-btn:hover, .back-btn:focus-visible {
+      color: var(--text); border-color: var(--accent); outline: none;
+    }
+    .detail {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border-strong);
+      border-radius: var(--radius);
+      padding: var(--space-6);
+    }
+    .detail.p-critical { border-left-color: var(--critical); }
+    .detail.p-high     { border-left-color: var(--high); }
+    .detail.p-normal   { border-left-color: var(--normal); }
+    .detail.p-low      { border-left-color: var(--low); }
+    .detail.p-untriaged{ border-left-color: var(--border-strong); }
+    .detail h1 {
+      font-size: 22px; line-height: 1.25; margin: 0 0 var(--space-3);
+      letter-spacing: 0;
+    }
+    .detail .meta {
+      display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2);
+      margin-bottom: var(--space-6);
+    }
+    .detail-section { border-top: 1px solid var(--border); padding-top: var(--space-4); margin-top: var(--space-4); }
+    .detail-section h2 {
+      margin: 0 0 var(--space-2); font-size: 12px; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--text-mute);
+    }
+    .detail-text {
+      color: var(--text-2); white-space: pre-wrap; overflow-wrap: anywhere;
+      margin: 0; font-size: 14px;
+    }
+    .detail-empty { color: var(--text-mute); font-size: 13px; margin: 0; }
+
     footer { margin-top: var(--space-8); color: var(--text-mute); font-size: 12px; text-align: center; }
     footer code { font-family: var(--mono); color: var(--text-2); }
 
@@ -241,6 +286,8 @@
     // Critical-first ordering. Lower rank = higher up the queue; untriaged sinks
     // to the bottom. Ties broken by most-recently-updated.
     const PRIORITY_RANK = { critical: 0, high: 1, normal: 2, low: 3 };
+    const AppState = { issues: [], selectedId: null };
+
     function priorityRank(p) {
       return p && p in PRIORITY_RANK ? PRIORITY_RANK[p] : 99;
     }
@@ -255,7 +302,7 @@
     function issueCard(issue) {
       const key = issue.priority || "untriaged";
       return (
-        '<article class="card p-' + key + '" data-id="' + escapeHtml(issue.id) + '">' +
+        '<button type="button" class="card p-' + key + '" data-id="' + escapeHtml(issue.id) + '">' +
           '<div class="body">' +
             '<h3 class="title">' + escapeHtml(issue.title) + "</h3>" +
             '<div class="meta">' +
@@ -264,7 +311,7 @@
             "</div>" +
           "</div>" +
           '<span class="badge p-' + key + '">' + escapeHtml(key) + "</span>" +
-        "</article>"
+        "</button>"
       );
     }
 
@@ -273,6 +320,51 @@
       const main = document.getElementById("main");
       main.innerHTML =
         '<div class="queue">' + ordered.map(issueCard).join("") + "</div>";
+      main.querySelectorAll(".card[data-id]").forEach(function (card) {
+        card.addEventListener("click", function () {
+          selectIssue(card.getAttribute("data-id"));
+        });
+      });
+    }
+
+    function findIssue(id) {
+      return AppState.issues.find(function (issue) { return String(issue.id) === String(id); });
+    }
+
+    function renderDetail(issue) {
+      const key = issue.priority || "untriaged";
+      const repro = issue.repro_steps
+        ? '<p class="detail-text">' + escapeHtml(issue.repro_steps) + "</p>"
+        : '<p class="detail-empty">No repro steps captured yet.</p>';
+      document.getElementById("main").innerHTML =
+        '<div class="toolbar"><button type="button" class="back-btn" id="back-to-queue">&larr; Queue</button></div>' +
+        '<article class="detail p-' + key + '">' +
+          "<h1>" + escapeHtml(issue.title) + "</h1>" +
+          '<div class="meta">' +
+            '<span class="source">' + escapeHtml(issue.source) + "</span>" +
+            '<span class="id">' + escapeHtml(issue.id) + "</span>" +
+            '<span class="badge p-' + key + '">' + escapeHtml(key) + "</span>" +
+          "</div>" +
+          '<section class="detail-section">' +
+            "<h2>Report</h2>" +
+            '<p class="detail-text">' + escapeHtml(issue.body || "") + "</p>" +
+          "</section>" +
+          '<section class="detail-section">' +
+            "<h2>Repro Steps</h2>" +
+            repro +
+          "</section>" +
+        "</article>";
+      document.getElementById("back-to-queue").addEventListener("click", function () {
+        AppState.selectedId = null;
+        renderQueue(AppState.issues);
+      });
+    }
+
+    function selectIssue(id) {
+      const issue = findIssue(id);
+      if (!issue) return;
+      AppState.selectedId = id;
+      renderDetail(issue);
     }
 
     function renderLoading() {
@@ -324,10 +416,11 @@
         await DataSource.init();
         renderSourcePill();
         const issues = await DataSource.listIssues();
+        AppState.issues = issues || [];
         if (!issues || issues.length === 0) {
           renderEmpty();
         } else {
-          renderQueue(issues);
+          renderQueue(AppState.issues);
         }
       } catch (err) {
         console.error(err);
