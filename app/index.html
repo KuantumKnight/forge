@@ -236,6 +236,35 @@
     .investigate-btn[disabled] {
       cursor: default; opacity: .72; box-shadow: none;
     }
+    .investigation-status {
+      border: 1px solid var(--edge);
+      background: var(--panel-2);
+      border-radius: var(--r);
+      padding: var(--s4);
+      margin-bottom: var(--s5);
+    }
+    .investigation-status .status-title {
+      margin: 0 0 var(--s3);
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--quench);
+    }
+    .investigation-status.error .status-title { color: var(--crit); }
+    .investigation-steps {
+      display: grid; gap: var(--s2); margin: 0; padding: 0; list-style: none;
+    }
+    .investigation-step {
+      display: flex; align-items: center; gap: var(--s2);
+      color: var(--text-2); font-size: 13px;
+    }
+    .step-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--edge-2); flex: 0 0 auto;
+    }
+    .investigation-step.active .step-dot {
+      background: var(--quench); box-shadow: 0 0 10px var(--quench);
+    }
+    .investigation-step.done .step-dot { background: var(--norm); }
+    .investigation-step.pending { color: var(--mute); }
     .detail {
       position: relative; overflow: hidden;
       background: var(--panel); border: 1px solid var(--edge);
@@ -591,6 +620,37 @@
       );
     }
 
+    function renderInvestigationStatus(investigation) {
+      if (!investigation || investigation.status === "idle") return "";
+      if (investigation.status === "error") {
+        return (
+          '<div class="investigation-status error">' +
+            '<p class="status-title">Investigation blocked</p>' +
+            '<p class="detail-empty">' + escapeHtml(investigation.message || "Workflow run failed to start.") + "</p>" +
+          "</div>"
+        );
+      }
+      const phase = investigation.phase || "queued";
+      const steps = [
+        { key: "queued", label: "Workflow run queued" },
+        { key: "evidence", label: "Gathering issue, related reports, and code evidence" },
+        { key: "synthesis", label: "Synthesizing root-cause hypothesis" },
+      ];
+      const phaseIndex = steps.findIndex(function (step) { return step.key === phase; });
+      return (
+        '<div class="investigation-status" aria-live="polite">' +
+          '<p class="status-title">Investigation running</p>' +
+          '<ol class="investigation-steps">' +
+            steps.map(function (step, idx) {
+              const state = idx < phaseIndex ? "done" : (idx === phaseIndex ? "active" : "pending");
+              return '<li class="investigation-step ' + state + '"><span class="step-dot"></span>' +
+                '<span>' + escapeHtml(step.label) + "</span></li>";
+            }).join("") +
+          "</ol>" +
+        "</div>"
+      );
+    }
+
     function renderDetail(issue) {
       const key = issue.priority || "untriaged";
       const investigation = AppState.investigations[issue.id] || { status: "idle" };
@@ -613,6 +673,7 @@
               (investigating ? "Investigating" : "Investigate") +
             "</button>" +
           "</div>" +
+          renderInvestigationStatus(investigation) +
           '<section class="detail-section">' +
             "<h2>Report</h2>" +
             '<p class="detail-text">' + escapeHtml(issue.body || "") + "</p>" +
@@ -643,11 +704,17 @@
     async function startInvestigation(issueId) {
       const issue = findIssue(issueId);
       if (!issue) return;
-      AppState.investigations[issueId] = { status: "running", started_at: new Date().toISOString() };
+      AppState.investigations[issueId] = {
+        status: "running",
+        phase: "queued",
+        started_at: new Date().toISOString(),
+      };
       renderDetail(issue);
       try {
         const run = await DataSource.triggerInvestigation(issue);
-        AppState.investigations[issueId] = Object.assign(AppState.investigations[issueId], run);
+        AppState.investigations[issueId] = Object.assign(AppState.investigations[issueId], run, {
+          phase: "evidence",
+        });
       } catch (err) {
         AppState.investigations[issueId] = {
           status: "error",

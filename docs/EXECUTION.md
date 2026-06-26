@@ -166,7 +166,7 @@ forge/
 
 ### Lane B — Investigation UI
 - [x] **[B]** "Investigate" button on detail view → triggers workflow run. — commit: `feat(app): trigger investigation` _(detail view has an Investigate action wired to `DataSource.triggerInvestigation`; live mode attempts the Lemma `investigate` workflow API when exposed, mock mode records a deterministic run id so Lane B can build ahead. Inline script parse check PASS.)_
-- [ ] **[B]** Progress/steps indicator while running. — commit: `feat(app): investigation progress view`
+- [x] **[B]** Progress/steps indicator while running. — commit: `feat(app): investigation progress view` _(detail view shows an investigation status panel with queued/evidence/synthesis steps while a run is active, plus a clear error state when trigger startup fails. Inline script parse check PASS.)_
 - [ ] **[B]** Evidence cards with clickable commit/issue links. — commit: `feat(app): evidence cards with links`
 - [ ] **[B]** Hypothesis summary block (no fake %, evidence only). — commit: `feat(app): root-cause summary`
 
