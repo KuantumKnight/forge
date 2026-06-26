@@ -1,18 +1,31 @@
 {
   "gh_142": {
-    "hypothesis": "The crash originates in `determineBaseRepo` inside `github.com/cli/cli/v2/pkg/cmd/pr/create`: when the local git config has no `upstream` remote (e.g., a freshly cloned fork with only `origin`), the function appears to dereference a nil remote reference — likely an upstream URL or the upstream config entry it tries to read when picking a base branch — rather than first checking that the upstream remote exists. Repro confirms the trigger: clone a fork, omit the `upstream` remote, run `gh pr create`, and `determineBaseRepo` panics on a nil pointer instead of surfacing a user-facing error asking the user to configure an upstream. The matched Slack report (iss_003) is the same root cause from another reporter, and none of the supplied commit candidates touch this code path, so evidence is limited to the two reports and the stack frame in the signature.",
+    "hypothesis": "The crash originates in `getRemotes` at `pkg/cmd/pr/create/create.go:1023`: when `gh pr create` is run in a freshly cloned fork with no `upstream` remote configured (and no `--repo` override), `opts.Remotes()` either returns an error that the function swallows because it is not unconditionally re-thrown, or returns a nil/empty `remotes` value with `err == nil`. In both paths the function returns `(remotes, nil)` — a nil/empty slice with no error — so the caller (the `Browser`/`BaseRef` resolution that asks for an \"upstream\" remote) dereferences a nil remote and produces the `runtime error: invalid memory address or nil pointer dereference` recorded in the trace at `pkg/cmd/pr/create.getRemotes(...)`. The Slack issue `iss_003` (\"gh pr create just crashes if origin isn't set up right\") reports the same crash in essentially the same scenario and is linked from gh_142, reinforcing that the failure mode is a missing empty/nil-remote guard in `getRemotes` rather than anything specific to a single user's git config.",
     "evidence": [
       {
-        "url": "https://lemma.work/pod/019f01ec-5992-732f-b395-a2b29fc87254/files?file=/issues/gh_142.md",
+        "url": "https://github.com/cli/cli/blob/954ffc37e5931a9621868a50f05c8fb17e288f19/pkg/cmd/pr/create/create.go#L1023-L1034",
         "type": "file",
-        "label": "Original report — Panic on `gh pr create` when repo has no upstream remote"
+        "label": "pkg/cmd/pr/create/create.go:1023 — getRemotes()"
       },
       {
         "url": "https://lemma.work/pod/019f01ec-5992-732f-b395-a2b29fc87254/files?file=/issues/iss_003.md",
         "type": "issue",
         "label": "gh pr create just crashes if origin isn't set up right (slack)"
+      },
+      {
+        "url": "https://lemma.work/pod/019f01ec-5992-732f-b395-a2b29fc87254/files?file=/issues/gh_142.md",
+        "type": "file",
+        "label": "Original report — Panic on `gh pr create` when repo has no upstream remote"
       }
-    ]
+    ],
+    "proposed_fix": {
+      "url": "https://github.com/cli/cli/blob/954ffc37e5931a9621868a50f05c8fb17e288f19/pkg/cmd/pr/create/create.go#L1023-L1034",
+      "diff": "--- a/pkg/cmd/pr/create/create.go\n+++ b/pkg/cmd/pr/create/create.go\n@@ -1023,12 +1023,15 @@\n func getRemotes(opts *CreateOptions) (ghContext.Remotes, error) {\n \t// TODO: consider obtaining remotes from GitClient instead\n \tremotes, err := opts.Remotes()\n \tif err != nil {\n \t\t// When a repo override value is given, ignore errors when fetching git remotes\n \t\t// to support using this command outside of git repos.\n \t\tif opts.RepoOverride == \"\" {\n \t\t\treturn nil, err\n \t\t}\n \t}\n+\tif len(remotes) == 0 {\n+\t\treturn nil, errors.New(\"no git remotes found; configure `origin` and `upstream`, or pass --repo\")\n+\t}\n \treturn remotes, nil\n }",
+      "line_end": 1034,
+      "file_path": "pkg/cmd/pr/create/create.go",
+      "rationale": "Returning a clear error from `getRemotes` when no remotes are present prevents the caller from dereferencing a nil/empty remotes slice — the exact path the panic trace points at — and gives the user an actionable message instead of a stack trace.",
+      "line_start": 1023
+    }
   },
   "gh_158": {
     "hypothesis": "The root cause lives in the CLI's auth/token-refresh path: when an SSO-enforced org invalidates a stored token after the ~8-hour session window, the auth subsystem does not treat the resulting `HTTP 401: Bad credentials` as a refresh trigger and surfaces the error instead of calling `gh auth refresh` (or prompting the user to do so). The user is therefore forced to re-run `gh auth login` manually. The same behavior was reported previously as iss_007 (401 errors after being logged in for a few hours with SSO), which the issue record explicitly lists under `related_ids`, and a separate report (cli/cli#13709) indicates `gh auth refresh` itself is unreliable — together these point to the refresh-on-401 logic in the auth package (likely around the request middleware or token store that wraps API calls) as the component that fails to re-establish SSO-scoped credentials. The provided commit evidence matched on keywords only (coding-agent detection, AGENTS.md guidance, dev-tunnels bump) and does not bear on refresh behavior, so it is not cited.",
