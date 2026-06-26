@@ -70,6 +70,43 @@
       color: var(--text-mute); text-align: center; padding: var(--space-8) 0;
       font-size: 13px;
     }
+
+    /* ---- Queue ---- */
+    .queue { display: flex; flex-direction: column; gap: var(--space-3); }
+    .card {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--space-4);
+      display: flex; align-items: flex-start; gap: var(--space-4);
+      transition: border-color .12s ease, background .12s ease;
+    }
+    .card:hover { border-color: var(--border-strong); background: var(--surface-2); }
+    .card .body { flex: 1; min-width: 0; }
+    .card .title {
+      font-size: 15px; font-weight: 600; color: var(--text);
+      margin: 0 0 var(--space-2);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .card .meta {
+      display: flex; align-items: center; gap: var(--space-3);
+      font-family: var(--mono); font-size: 11px; color: var(--text-mute);
+    }
+    .card .meta .id { color: var(--text-2); }
+    .source {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em;
+      text-transform: uppercase; padding: 2px 7px; border-radius: 5px;
+      border: 1px solid var(--border-strong); color: var(--text-2);
+    }
+    /* priority badge — neutral here; color coding added in Box 4 */
+    .badge {
+      flex-shrink: 0;
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 999px;
+      border: 1px solid var(--border-strong); color: var(--text-2);
+      white-space: nowrap;
+    }
     footer { margin-top: var(--space-8); color: var(--text-mute); font-size: 12px; text-align: center; }
     footer code { font-family: var(--mono); color: var(--text-2); }
   </style>
@@ -120,7 +157,47 @@
         }
         return this.mode;
       },
+
+      /* The data seam. Day 1 reads the mock fixture; the EOD checkpoint box
+         flips this to the live `issues` Table — same row shape (contracts §1). */
+      async listIssues() {
+        if (this.mode === "live") {
+          const res = await this.client.records.list("issues", { limit: 100 });
+          return res.items || res;
+        }
+        const res = await fetch("../seed/issues.json", { cache: "no-store" });
+        if (!res.ok) throw new Error("could not load seed/issues.json (" + res.status + ")");
+        return res.json();
+      },
     };
+
+    function escapeHtml(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+
+    function issueCard(issue) {
+      const priorityLabel = issue.priority ? issue.priority : "untriaged";
+      return (
+        '<article class="card" data-id="' + escapeHtml(issue.id) + '">' +
+          '<div class="body">' +
+            '<h3 class="title">' + escapeHtml(issue.title) + "</h3>" +
+            '<div class="meta">' +
+              '<span class="id">' + escapeHtml(issue.id) + "</span>" +
+              '<span class="source">' + escapeHtml(issue.source) + "</span>" +
+            "</div>" +
+          "</div>" +
+          '<span class="badge">' + escapeHtml(priorityLabel) + "</span>" +
+        "</article>"
+      );
+    }
+
+    function renderQueue(issues) {
+      const main = document.getElementById("main");
+      main.innerHTML =
+        '<div class="queue">' + issues.map(issueCard).join("") + "</div>";
+    }
 
     function renderSourcePill() {
       const pill = document.getElementById("source-pill");
@@ -138,10 +215,8 @@
     async function boot() {
       await DataSource.init();
       renderSourcePill();
-      // Box 1 milestone: the app shell serves and reports its data source.
-      // The queue itself (cards, sort, states) is wired up in later boxes.
-      document.getElementById("main").innerHTML =
-        '<div class="placeholder">Priority queue — coming next.</div>';
+      const issues = await DataSource.listIssues();
+      renderQueue(issues);
     }
 
     // Load the SDK from the injected API origin, then boot. If there is no
