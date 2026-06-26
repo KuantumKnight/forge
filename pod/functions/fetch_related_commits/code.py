@@ -30,7 +30,7 @@ class FetchRelatedCommitsInput(BaseModel):
 class FetchRelatedCommitsConfig(BaseModel):
     default_repo: str = "cli/cli"
     github_token: Optional[str] = None
-    scan: int = 30
+    scan: int = 12
 
 
 class CommitEvidence(BaseModel):

@@ -80,12 +80,27 @@ async def find_similar_evidence(ctx, data: FindSimilarEvidenceInput) -> FindSimi
 
     ranked = sorted(best.items(), key=lambda kv: kv[1], reverse=True)[: data.limit]
 
+    # Batch the candidate row reads into ONE query instead of N gets — round
+    # trips dominate latency, so fewer calls is the main lever we control.
+    rows_by_id: dict[str, dict] = {}
+    if ranked:
+        ids = "', '".join(cid.replace("'", "") for cid, _ in ranked)
+        try:
+            rows = pod.query(
+                f"select id, title, source, external_id from issues where id in ('{ids}')"
+            ).to_dict().get("items", [])
+            rows_by_id = {r["id"]: r for r in rows}
+        except Exception:
+            rows_by_id = {}
+
     evidence: List[IssueEvidence] = []
     for cid, score in ranked:
-        try:
-            row = pod.table("issues").get(cid)
-        except Exception:
-            continue
+        row = rows_by_id.get(cid)
+        if row is None:
+            try:
+                row = pod.table("issues").get(cid)
+            except Exception:
+                continue
         src = row.get("source", "unknown")
         label = f"{row.get('title', cid)[:70]} ({src})"
         evidence.append(IssueEvidence(

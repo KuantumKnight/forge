@@ -1,0 +1,58 @@
+{
+  // D4 box 5 — the one judgment step. Reads the issue + the gathered signals
+  // (error signature, related commits, similar issues), writes a one-paragraph
+  // root-cause hypothesis, and selects <=3 of the PROVIDED evidence items
+  // (contracts.md §5). Never invents a URL; no confidence %. output_schema caps
+  // evidence at 3 (box 6).
+  "name": "investigate_synth",
+  "description": "Synthesize a root-cause hypothesis for an issue from gathered signals, citing <=3 of the provided evidence items (real URLs only, no confidence %).",
+  "instruction": { "$file": "instruction.md" },
+  "toolsets": ["POD"],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "issue_id": { "type": "string" },
+      "error_signature": { "type": "string" },
+      "has_trace": { "type": "boolean" },
+      "report_evidence": { "type": "object" },
+      "commit_evidence": { "type": "array" },
+      "issue_evidence": { "type": "array" }
+    },
+    "required": ["issue_id"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "issue_id": { "type": "string" },
+      "hypothesis": { "type": "string", "description": "One paragraph: most likely root cause and where." },
+      "evidence": {
+        "type": "array",
+        "maxItems": 3,
+        "items": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["commit", "issue", "log", "file"] },
+            "label": { "type": "string" },
+            "url": { "type": "string" }
+          },
+          "required": ["type", "label", "url"]
+        }
+      }
+    },
+    "required": ["issue_id", "hypothesis", "evidence"]
+  },
+  "permissions": {
+    "grants": [
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "issues",
+        "permission_ids": ["datastore.table.read", "datastore.record.read"]
+      },
+      {
+        "resource_type": "folder",
+        "resource_name": "/issues",
+        "permission_ids": ["folder.read"]
+      }
+    ]
+  }
+}

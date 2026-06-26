@@ -58,12 +58,29 @@
         }
       }
     },
+    {
+      "id": "synthesize",
+      "type": "AGENT",
+      "label": "Synthesize root-cause hypothesis",
+      "config": {
+        "agent_name": "investigate_synth",
+        "input_mapping": {
+          "issue_id": { "type": "expression", "value": "intake.issue_id" },
+          "error_signature": { "type": "expression", "value": "analyze.error_signature", "optional": true },
+          "has_trace": { "type": "expression", "value": "analyze.has_trace", "optional": true },
+          "report_evidence": { "type": "expression", "value": "analyze.report_evidence", "optional": true },
+          "commit_evidence": { "type": "expression", "value": "commits.commit_evidence", "optional": true },
+          "issue_evidence": { "type": "expression", "value": "similar.issue_evidence", "optional": true }
+        }
+      }
+    },
     { "id": "end", "type": "END", "label": "Done" }
   ],
   "edges": [
     { "id": "e_intake_analyze", "source": "intake", "target": "analyze" },
     { "id": "e_analyze_commits", "source": "analyze", "target": "commits" },
     { "id": "e_commits_similar", "source": "commits", "target": "similar" },
-    { "id": "e_similar_end", "source": "similar", "target": "end" }
+    { "id": "e_similar_synth", "source": "similar", "target": "synthesize" },
+    { "id": "e_synth_end", "source": "synthesize", "target": "end" }
   ]
 }
