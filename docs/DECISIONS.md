@@ -70,6 +70,11 @@ any wasted complexity?" score and the hiring track's "how they scoped and defend
 - **Why:** One LLM call (synthesis) keeps the run < ~15s (box 6); the gatherers are deterministic, individually testable, and auditable. Supplying URLs from code rather than the LLM keeps evidence verifiable, not hallucinated — the whole point of "evidence, not confidence %". Splitting gather vs. synthesize matches the workflow node model (functions = reliable verbs, one agent = one cohesive judgment).
 - **Rejected:** An AGENT node per gathering step (3–4 LLM calls → slow, >15s, costlier, harder to keep < budget) and letting the synthesis agent fetch/construct URLs itself (fabrication risk + extra tool-call latency). `find_similar_evidence` is a workflow-specific sibling of `find_similar` because function output schemas are immutable after create — adding URL/source fields to the existing `find_similar` would require delete+recreate.
 
+### D-014 · Release Center is GO (D4 go/no-go)
+- **Decision:** Build the Release Center on D5 — `github_fetch` extended for merged PRs since last tag, a `release_notes` agent that groups PRs (Added/Fixed/Changed), a `prepare_release` workflow (FORM: version), and a release view in the app. Hardening runs in parallel, not deferred.
+- **Why:** The D4 kill criterion was "drop Release Center if investigation isn't solid." Investigation passed its EOD-D4 checkpoint — `scripts/smoke_investigate.py` is a clean **INVESTIGATE SMOKE PASS** (both demo-anchor criticals → COMPLETED, cited hypothesis + ≥2 clickable evidence), the app renders the live result, and a backup take is recorded for the slow-backend case. With the hero loop solid and de-risked, the optional feature is unblocked and adds demo range (ingest→triage→dedup→investigate→**ship**).
+- **Rejected:** Dropping it to harden only (D-007's conservative path). Reason: the single kill condition that would force that (flaky investigation) did not trigger; the backend latency is mitigated by the recorded-run fallback, not by cutting scope. Re-evaluate D5 AM — if Release Center slips >2× estimate, the kill criteria still apply and we fall back to hardening.
+
 ---
 
 ## Scope & kill criteria (Phase 0 agreement)
@@ -83,4 +88,4 @@ any wasted complexity?" score and the hiring track's "how they scoped and defend
 
 ### Open decisions (TBD)
 - Slack/Email: Surfaces vs seed — decide by end of D2.
-- Release Center: go/no-go — decide D4 AM (record here).
+- Release Center: go/no-go — **RESOLVED D4: GO** (see D-014).
