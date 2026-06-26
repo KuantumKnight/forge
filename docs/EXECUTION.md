@@ -128,7 +128,7 @@ forge/
 
 ### Lane B — Ingestion glue + detail view
 - [x] **[B]** `seed/slack.json` + `seed/email.json` fixtures. — commit: `feat(seed): slack and email fixtures` _(4 Slack + 4 email rows, exact `issues` contract shape, includes duplicate links to GitHub issues and untriaged examples for loader/triage.)_
-- [ ] **[B]** Seed loader writes Slack/email into the `issues` Table (same shape). — commit: `feat(ingest): load seed feedback into table`
+- [x] **[B]** Seed loader writes Slack/email into the `issues` Table (same shape). — commit: `feat(ingest): load seed feedback into table` _(`ingest/seed/load_feedback.py` validates fixtures with `--dry-run`, upserts rows idempotently through the Lemma SDK, and writes `/issues/{id}.md` Files. Verified live: 8 rows loaded into `issues` (8 new, 0 updated).)_
 - [ ] **[B]** Issue Detail view: title, body, source, priority, repro steps. — commit: `feat(app): issue detail view`
 - [ ] **[B]** Source badges (GitHub / Slack / Email). — commit: `feat(app): source badges`
 
