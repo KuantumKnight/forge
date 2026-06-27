@@ -1,0 +1,19 @@
+{
+  // Post-D5 — the granted writer for operator-driven status transitions
+  // (mark-resolved / re-open) the App exposes. Validates against the issues.status
+  // enum, then writes status back to the row. Like normalize_priority, the App/agent
+  // never writes the table directly; this function holds the write grant.
+  "name": "set_status",
+  "description": "Set an issue's lifecycle status (new|triaged|investigating|resolved) after validating it against the enum.",
+  "type": "API",
+  "code": { "$file": "code.py" },
+  "permissions": {
+    "grants": [
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "issues",
+        "permission_ids": ["datastore.table.read", "datastore.record.read", "datastore.record.write"]
+      }
+    ]
+  }
+}

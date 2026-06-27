@@ -224,6 +224,35 @@
       background: var(--quench-dim); white-space: nowrap;
     }
 
+    /* lifecycle status pill — quiet by default, brighter while live/closed */
+    .status-pill {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.05em;
+      text-transform: uppercase; padding: 2px 8px; border-radius: 999px;
+      border: 1px solid var(--edge-2); color: var(--mute); white-space: nowrap;
+    }
+    .status-pill.st-triaged { color: var(--text-2); border-color: var(--edge-2); }
+    .status-pill.st-investigating {
+      color: var(--high); border-color: rgba(255,157,46,0.5); background: rgba(255,157,46,0.10);
+    }
+    .status-pill.st-resolved {
+      color: var(--quench); border-color: rgba(91,184,176,0.6); background: var(--quench-dim);
+    }
+    .card.resolved { opacity: 0.62; }
+    .card.resolved .title { text-decoration: line-through; text-decoration-color: var(--edge-2); }
+
+    /* resolve / re-open action in the detail toolbar */
+    .status-btn {
+      font: inherit; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      border-radius: var(--r); padding: 9px 14px; cursor: pointer;
+      background: transparent; color: var(--quench); border: 1px solid rgba(91,184,176,0.6);
+    }
+    .status-btn:hover:not(:disabled), .status-btn:focus-visible {
+      background: var(--quench-dim); outline: none;
+    }
+    .status-btn.reopen { color: var(--text-2); border-color: var(--edge-2); }
+    .status-btn:disabled { opacity: 0.6; cursor: default; }
+
     /* heat rail + critical glow, per priority */
     .card.p-critical::before { background: linear-gradient(var(--crit), #c33a16); box-shadow: 0 0 16px var(--crit-glow); }
     .card.p-high::before     { background: var(--high); }
@@ -680,6 +709,19 @@
         }
         return { mode: "live", run_id: runId, hypothesis: "", evidence: [], proposed_fix: null };
       },
+
+      // Write an issue's lifecycle status. Live mode goes through the granted
+      // `set_status` Function (the only writer); other modes just succeed so the
+      // UI updates its in-memory copy. Returns true on a confirmed write.
+      async setStatus(issueId, status) {
+        if (this.mode === "live" && this.client && this.client.functions) {
+          // Browser SDK: functions.run(name, { input }) -> { input_data } on the wire.
+          const res = await this.client.functions.run("set_status", { input: { issue_id: issueId, status: status } });
+          const out = (res && (res.output_data || res.output || res.result)) || res || {};
+          return out.ok !== false;
+        }
+        return true;  // mock/seed/sample — optimistic local update
+      },
     };
 
     function escapeHtml(s) {
@@ -737,6 +779,14 @@
       return '<span class="source s-' + escapeHtml(key) + '">' + escapeHtml(label) + "</span>";
     }
 
+    // Lifecycle status pill: new -> triaged -> investigating -> resolved.
+    const STATUS_LABELS = { new: "New", triaged: "Triaged", investigating: "Investigating", resolved: "Resolved" };
+    function statusBadge(issue) {
+      const key = STATUS_LABELS[issue.status] ? issue.status : "new";
+      return '<span class="status-pill st-' + escapeHtml(key) + '">' +
+        escapeHtml(STATUS_LABELS[key]) + "</span>";
+    }
+
     function relatedCount(issue) {
       return Array.isArray(issue.related_ids) ? issue.related_ids.length : 0;
     }
@@ -749,13 +799,15 @@
 
     function issueCard(issue) {
       const key = issue.priority || "untriaged";
+      const resolved = issue.status === "resolved" ? " resolved" : "";
       return (
-        '<button type="button" class="card p-' + key + '" data-id="' + escapeHtml(issue.id) + '">' +
+        '<button type="button" class="card p-' + key + resolved + '" data-id="' + escapeHtml(issue.id) + '">' +
           '<div class="body">' +
             '<h3 class="title">' + escapeHtml(issue.title) + "</h3>" +
             '<div class="meta">' +
               '<span class="id">' + escapeHtml(issue.id) + "</span>" +
               sourceBadge(issue.source) +
+              statusBadge(issue) +
               relatedBadge(issue) +
             "</div>" +
           "</div>" +
@@ -1042,6 +1094,15 @@
       "</div>";
     }
 
+    // Close the loop: resolve an open issue, or re-open a resolved one. The
+    // button id is read by renderDetail's handler, which calls changeStatus.
+    function renderStatusActions(issue) {
+      if (issue.status === "resolved") {
+        return '<button type="button" class="status-btn reopen" id="reopen-issue" data-status="triaged">Re-open</button>';
+      }
+      return '<button type="button" class="status-btn resolve" id="resolve-issue" data-status="resolved">Mark resolved</button>';
+    }
+
     function renderDetail(issue) {
       const key = issue.priority || "untriaged";
       const investigation = AppState.investigations[issue.id] || { status: "idle" };
@@ -1057,6 +1118,7 @@
             sourceBadge(issue.source) +
             '<span class="id">' + escapeHtml(issue.id) + "</span>" +
             '<span class="badge p-' + key + '">' + escapeHtml(key) + "</span>" +
+            statusBadge(issue) +
           "</div>" +
           renderTriageReason(issue) +
           '<div class="detail-actions">' +
@@ -1064,6 +1126,7 @@
               (investigating ? " disabled" : "") + ">" +
               (investigating ? "Investigating" : "Investigate") +
             "</button>" +
+            renderStatusActions(issue) +
           "</div>" +
           renderInvestigationStatus(investigation) +
           '<section class="detail-section">' +
@@ -1089,6 +1152,12 @@
       document.getElementById("investigate-issue").addEventListener("click", function () {
         startInvestigation(issue.id);
       });
+      const statusBtn = document.getElementById("resolve-issue") || document.getElementById("reopen-issue");
+      if (statusBtn) {
+        statusBtn.addEventListener("click", function () {
+          changeStatus(issue.id, statusBtn.getAttribute("data-status"), statusBtn);
+        });
+      }
       const copyBtn = document.getElementById("copy-fix");
       if (copyBtn) {
         copyBtn.addEventListener("click", function () {
@@ -1147,6 +1216,30 @@
           status: "error",
           message: (err && err.message) || "Investigation could not start. Press Investigate to try again.",
         };
+      }
+      renderDetail(issue);
+    }
+
+    // Operator-driven status change (mark resolved / re-open). Writes through the
+    // granted set_status Function, then updates the in-memory row so the queue and
+    // detail reflect the new state without a full reload.
+    async function changeStatus(issueId, status, btn) {
+      const issue = findIssue(issueId);
+      if (!issue) return;
+      const prevLabel = btn ? btn.textContent : "";
+      if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+      try {
+        const ok = await DataSource.setStatus(issueId, status);
+        if (ok) {
+          issue.status = status;
+          issue.updated_at = new Date().toISOString();
+        } else if (btn) {
+          btn.disabled = false; btn.textContent = prevLabel;
+          return;
+        }
+      } catch (err) {
+        if (btn) { btn.disabled = false; btn.textContent = prevLabel; }
+        return;
       }
       renderDetail(issue);
     }
