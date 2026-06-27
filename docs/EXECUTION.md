@@ -219,7 +219,7 @@ forge/
 - [ ] **[A+B]** Final run-through on the curated dataset (twice). — _(no commit; rehearsal)_
 - [ ] **[B]** Record the 3-min screen recording (PRD §7 storyboard). — commit: `docs: add final demo recording link`
 - [ ] **[B]** Writeup: problem + approach + "what we cut & why" (from DECISIONS.md). — commit: `docs: submission writeup`
-- [ ] **[A]** 🔒 Scan git history for leaked keys; rotate if any. — commit: `chore: security pass on secrets`
+- [x] **[A]** 🔒 Scan git history for leaked keys; rotate if any. — commit: `chore: security pass on secrets` _(**PASS — clean, nothing to rotate.** `.env` never committed (git-ignored); no `*.key/*.pem/secret` files tracked; `logs/` (raw transcripts) git-ignored. History-wide blob scan over `git rev-list --all` for GitHub/Anthropic/OpenAI/AWS/Slack/Google token shapes + JWTs → 0 hits; assignment-style scan → only empty `.env.example` placeholders + docs. Only `TOKEN=` match is `smoke_files.py`'s `ZQXJ0RG` file-search marker (not a credential). Method + re-run command recorded in `docs/SECURITY.md`.)_
 - [ ] **[A+B]** Tag the submission. — commit: `chore: tag v1.0-submission` → `git tag v1.0-submission && git push --tags`
 - [ ] **[A+B]** Submit the form (problem, approach, recording, team details) **before deadline**.
 - [ ] **[A+B]** Confirm submission received; post in Discord if needed.
@@ -234,7 +234,7 @@ forge/
 - [ ] `investigate <id>` → hypothesis + ≥2 clickable evidence links (<15s or recorded).
 - [ ] Smoke script PASSES.
 - [ ] 3-min recording + writeup done; Lemma pod shown on camera.
-- [ ] No secrets in git history.
+- [x] No secrets in git history. _(verified 2026-06-27 — see `docs/SECURITY.md`.)_
 
 ---
 
