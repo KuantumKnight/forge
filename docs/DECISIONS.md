@@ -108,7 +108,7 @@ needed for the core loop (ingest → triage → dedup → investigate, shown in 
 | **Our own vector DB / Postgres / Redis / Qdrant** | Lemma Files auto-index + HYBRID search *is* the RAG + dedup engine. Running our own store would be parallel infra to maintain and explain. | `files.search(..., search_method="HYBRID")` over `/issues` (D-002). |
 | **Authenticated GitHub code search** (`/search/code`) for source grounding | Needs a token (the available PAT is empty) and is capped at 10 req/min — couples the hero to a secret and a rate limit. | Public, no-auth Git Trees + raw CDN: 2 API calls, uncapped CDN fetches, no secret (D-015). |
 | **Confidence percentages** on hypotheses | A fabricated number reads as rigor but isn't — judges (and engineers) distrust it. | Cite real evidence (clickable links + a real diff); say plainly when signals are thin (D-006). |
-| **Multi-repo support** | The demo is one repo (`cli/cli`); generality is config we'd never exercise on camera. | `default_repo` config on the GitHub functions — one line to change, zero abstraction tax. |
+| ~~**Multi-repo support**~~ **(UN-CUT, POST-D5)** | Originally cut as demo-only config. Re-added as a real product dimension. | `source_account` column + source/account switcher; GitHub ingest stamps the repo, the switcher groups by repo/channel/mailbox. See POST-D5 note below. |
 | **Live webhook/Slack/email ingestion** | Real-time connectors need org auth set up live and are flaky to demo. | One live GitHub fetch shown on camera + deterministic seed for Slack/email (D-003). |
 | **Per-user RLS on `issues`** | Forge is one team's shared triage queue, not per-user data. | `issues` created with `enable_rls=False` — shared team table (D-001). |
 
@@ -116,3 +116,18 @@ needed for the core loop (ingest → triage → dedup → investigate, shown in 
 > candidates (was top-1) so a semantically-identical report in different words still links,
 > with `dedup_confirm` still the precision gate; and `load_feedback` no longer sends the PK
 > in update payloads (the backend now rejects it).
+
+### POST-D5 expansion — trust controls & multi-source (June 27)
+A real triage product needs trust, not just throughput. Three additions, each a real
+backend layer (not UI-only), tracked in `EXECUTION.md`:
+- **Multi-source** (un-cuts multi-repo): `issues.source_account` (repo / Slack channel /
+  mailbox) + a source/account **switcher** in the queue. GitHub ingest stamps the repo at
+  write time; `scripts/backfill_events.py` derives accounts for seeded Slack/email from each
+  report's own content (never fabricated). Live Slack/email OAuth connectors remain deferred
+  (D-005 stands) — this is the data model + switcher, not new ingress.
+- **Human override controls**: a three-dot menu on the opened issue (Priority/Assignee/Status),
+  backed by granted writer Functions `set_priority` / `set_assignee` (and `set_status`). The
+  AI proposes; the operator stays in control.
+- **Audit / evidence trail**: an `events` table + timeline on the detail view — "ingested →
+  triaged → linked → operator overrides" with true timestamps and before→after detail. More
+  honest (and more useful) than a generic analytics dashboard; every writer logs to it.

@@ -19,11 +19,21 @@ line, and proposes a fix as a diff you can click through and verify. Built entir
 - [`docs/demo-script.md`](docs/demo-script.md) — 3-minute recording storyboard.
 
 ## Architecture (one line)
-Lemma is the whole backend: **Tables** (structured issues), **Files** (auto-embedded, hybrid search =
-dedup + RAG, no vector DB), **Agents** (triage, dedup-confirm, investigate-synth), a **Workflow**
-(`investigate`: analyze → related commits → similar issues → **ground the symbol in real source** →
-synthesize), **Functions** (github_fetch, find_similar, fetch_source_evidence, …), and an **App**
+Lemma is the whole backend: **Tables** (structured `issues` + an `events` audit trail), **Files**
+(auto-embedded, hybrid search = dedup + RAG, no vector DB), **Agents** (triage, dedup-confirm,
+investigate-synth), a **Workflow** (`investigate`: analyze → related commits → similar issues →
+**ground the symbol in real source** → synthesize), **Functions** (github_fetch, find_similar,
+fetch_source_evidence, the override writers set_priority/set_assignee/set_status, …), and an **App**
 (operator UI). No Postgres / Redis / Qdrant of our own.
+
+## Trust controls (POST-D5)
+A real triage product needs trust, not just throughput:
+- **Multi-source switcher** — group the queue by source *and* account (GitHub repo, Slack channel,
+  email mailbox) via `issues.source_account`. Multi-repo is real: GitHub ingest stamps the repo.
+- **Human override controls** — a three-dot menu on the opened issue (Priority / Assignee / Status),
+  backed by granted writer Functions. The AI proposes; the operator decides.
+- **Audit / evidence timeline** — every issue carries a trail (`ingested → triaged → linked →
+  operator overrides`) with timestamps and before→after detail. More useful than an analytics dashboard.
 
 ## The hero — verifiable investigation
 Open a crashing bug → **Investigate**. The workflow parses the stack frame, finds the crashing symbol
