@@ -13,6 +13,7 @@ records who changed what.
 
 import json
 import uuid
+from datetime import datetime, timezone
 from typing import Optional
 
 from pydantic import BaseModel
@@ -45,6 +46,7 @@ def _append_event(pod, issue_id, kind, actor, summary, detail=None):
             "actor": actor,
             "summary": summary,
             "detail": json.dumps(detail) if detail is not None else None,
+            "ts": datetime.now(timezone.utc).isoformat(),
         })
     except Exception:
         pass

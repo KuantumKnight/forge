@@ -49,6 +49,11 @@ EVENTS_SCHEMA: dict = {
          "description": "one human-readable line, e.g. 'AI triaged as Critical'"},
         {"name": "detail", "type": "TEXT",
          "description": "optional JSON string with structured before/after, e.g. {\"from\":\"high\",\"to\":\"critical\"}"},
+        # When it HAPPENED (writer-set ISO8601). Distinct from the auto
+        # ``created_at`` (when the row was recorded): backfilled events carry the
+        # issue's original time, so the timeline reads in true chronological order.
+        {"name": "ts", "type": "TEXT", "required": True,
+         "description": "ISO8601 time the event happened; the timeline sorts by this"},
     ],
 }
 

@@ -22,7 +22,7 @@ from pod.lemma_client import get_pod, load_env  # noqa: E402
 from pod.tables.issues_table import TABLE_NAME, ensure_issues_table  # noqa: E402
 
 
-def _row_from_issue(issue: dict) -> dict:
+def _row_from_issue(issue: dict, repo: str) -> dict:
     return {
         "id": f"gh_{issue['external_id']}",
         "source": "github",
@@ -32,6 +32,8 @@ def _row_from_issue(issue: dict) -> dict:
         "status": "new",
         "related_ids": [],
         "linked_prs": [],
+        # the repo this came from — the switcher's grouping key (multi-repo).
+        "source_account": repo,
     }
 
 
@@ -42,7 +44,7 @@ def ingest_github_issues(pod, repo: str, token: str | None = None, limit: int = 
 
     created = updated = 0
     for issue in issues:
-        row = _row_from_issue(issue)
+        row = _row_from_issue(issue, repo)
         rid = row["id"]
         try:
             pod.records.create(TABLE_NAME, row)
