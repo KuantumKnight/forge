@@ -1,0 +1,61 @@
+<svg width="1280" height="560" viewBox="0 0 1280 560" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Forge architecture on Lemma</title>
+  <desc id="desc">Architecture diagram showing GitHub, Slack and email ingestion flowing into Lemma Tables, Files, Agents, Workflows, Functions and the Forge app.</desc>
+  <rect width="1280" height="560" fill="#131313"/>
+  <text x="56" y="70" fill="#f2f1ee" font-family="Arial Black,Arial,sans-serif" font-size="34">Forge is a product, not plumbing</text>
+  <text x="56" y="103" fill="#b3b0ab" font-family="Consolas,monospace" font-size="16">External feedback enters once. Lemma carries state, search, judgment, workflow, and UI.</text>
+
+  <rect x="54" y="154" width="214" height="72" fill="#242424" stroke="#f2f1ee" stroke-width="3"/>
+  <text x="84" y="184" fill="#f2f1ee" font-family="Arial,sans-serif" font-size="20" font-weight="800">GitHub issues</text>
+  <text x="84" y="207" fill="#b3b0ab" font-family="Consolas,monospace" font-size="13">real cli/cli data</text>
+
+  <rect x="54" y="252" width="214" height="72" fill="#242424" stroke="#ffc21c" stroke-width="3"/>
+  <text x="84" y="282" fill="#f2f1ee" font-family="Arial,sans-serif" font-size="20" font-weight="800">Slack reports</text>
+  <text x="84" y="305" fill="#b3b0ab" font-family="Consolas,monospace" font-size="13">seeded channels</text>
+
+  <rect x="54" y="350" width="214" height="72" fill="#242424" stroke="#00cdbe" stroke-width="3"/>
+  <text x="84" y="380" fill="#f2f1ee" font-family="Arial,sans-serif" font-size="20" font-weight="800">Support email</text>
+  <text x="84" y="403" fill="#b3b0ab" font-family="Consolas,monospace" font-size="13">seeded mailboxes</text>
+
+  <path d="M282 190H382" stroke="#827e78" stroke-width="3"/>
+  <path d="M282 288H382" stroke="#827e78" stroke-width="3"/>
+  <path d="M282 386H382" stroke="#827e78" stroke-width="3"/>
+  <path d="M372 180L392 190L372 200" stroke="#827e78" stroke-width="3"/>
+  <path d="M372 278L392 288L372 298" stroke="#827e78" stroke-width="3"/>
+  <path d="M372 376L392 386L372 396" stroke="#827e78" stroke-width="3"/>
+
+  <rect x="400" y="136" width="508" height="344" fill="#1d1d1d" stroke="#f2f1ee" stroke-width="3"/>
+  <text x="430" y="176" fill="#f2f1ee" font-family="Arial Black,Arial,sans-serif" font-size="25">Lemma Pod</text>
+  <text x="430" y="203" fill="#b3b0ab" font-family="Consolas,monospace" font-size="14">the backend: no Postgres, Redis, vector DB, or custom API</text>
+
+  <rect x="430" y="238" width="196" height="64" fill="#242424" stroke="#ff4a1c" stroke-width="3"/>
+  <text x="454" y="266" fill="#f2f1ee" font-family="Arial,sans-serif" font-size="19" font-weight="800">Tables</text>
+  <text x="454" y="287" fill="#b3b0ab" font-family="Consolas,monospace" font-size="12">issues + events</text>
+
+  <rect x="682" y="238" width="196" height="64" fill="#242424" stroke="#00cdbe" stroke-width="3"/>
+  <text x="706" y="266" fill="#f2f1ee" font-family="Arial,sans-serif" font-size="19" font-weight="800">Files</text>
+  <text x="706" y="287" fill="#b3b0ab" font-family="Consolas,monospace" font-size="12">HYBRID search/RAG</text>
+
+  <rect x="430" y="334" width="196" height="64" fill="#242424" stroke="#b07cff" stroke-width="3"/>
+  <text x="454" y="362" fill="#f2f1ee" font-family="Arial,sans-serif" font-size="19" font-weight="800">Agents</text>
+  <text x="454" y="383" fill="#b3b0ab" font-family="Consolas,monospace" font-size="12">triage + synth</text>
+
+  <rect x="682" y="334" width="196" height="64" fill="#242424" stroke="#ff9412" stroke-width="3"/>
+  <text x="706" y="362" fill="#f2f1ee" font-family="Arial,sans-serif" font-size="19" font-weight="800">Workflows</text>
+  <text x="706" y="383" fill="#b3b0ab" font-family="Consolas,monospace" font-size="12">investigate graph</text>
+
+  <line x1="626" y1="270" x2="682" y2="270" stroke="#827e78" stroke-width="2"/>
+  <line x1="528" y1="302" x2="528" y2="334" stroke="#827e78" stroke-width="2"/>
+  <line x1="780" y1="302" x2="780" y2="334" stroke="#827e78" stroke-width="2"/>
+  <line x1="626" y1="366" x2="682" y2="366" stroke="#827e78" stroke-width="2"/>
+
+  <path d="M908 308H998" stroke="#827e78" stroke-width="3"/>
+  <path d="M988 298L1008 308L988 318" stroke="#827e78" stroke-width="3"/>
+  <rect x="1018" y="194" width="210" height="228" fill="#242424" stroke="#00cdbe" stroke-width="3"/>
+  <text x="1046" y="234" fill="#f2f1ee" font-family="Arial Black,Arial,sans-serif" font-size="23">Forge App</text>
+  <text x="1046" y="267" fill="#b3b0ab" font-family="Consolas,monospace" font-size="14">operator cockpit</text>
+  <text x="1046" y="306" fill="#f2f1ee" font-family="Arial,sans-serif" font-size="17">Fix next</text>
+  <text x="1046" y="334" fill="#f2f1ee" font-family="Arial,sans-serif" font-size="17">Evidence links</text>
+  <text x="1046" y="362" fill="#f2f1ee" font-family="Arial,sans-serif" font-size="17">Human override</text>
+  <text x="1046" y="390" fill="#f2f1ee" font-family="Arial,sans-serif" font-size="17">Audit trail</text>
+</svg>
