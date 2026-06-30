@@ -118,14 +118,44 @@
     /* ---- Cockpit: three persistent panes ---- */
     .cockpit {
       flex: 1 1 auto; min-height: 0; display: grid;
-      grid-template-columns: minmax(300px,340px) minmax(0,1fr) minmax(330px,400px);
+      grid-template-columns:
+        minmax(260px, var(--queue-col, 340px))
+        8px
+        minmax(320px, var(--center-col, 1fr))
+        8px
+        minmax(300px, var(--right-col, 380px));
     }
+    .cockpit.is-resizing { cursor: col-resize; user-select: none; }
     .pane {
       min-width: 0; min-height: 0; display: flex; flex-direction: column;
       background: var(--bg); border-right: var(--bw2) solid var(--edge);
     }
     .pane-center { background: var(--surface); }
     .pane-right { border-right: 0; }
+    .pane-resizer {
+      position: relative; min-width: 8px; cursor: col-resize; background: var(--bg);
+      border-right: var(--bw2) solid var(--edge); z-index: 5;
+      touch-action: none;
+    }
+    .pane-resizer::before {
+      content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: var(--bw2);
+      transform: translateX(-50%); background: var(--edge);
+    }
+    .pane-resizer::after {
+      content: ""; position: absolute; top: 50%; left: 50%; width: 6px; height: 42px;
+      transform: translate(-50%,-50%); background: var(--edge-soft);
+      box-shadow: 0 -10px 0 var(--edge-soft), 0 10px 0 var(--edge-soft);
+    }
+    .pane-resizer:hover,
+    .pane-resizer:focus-visible,
+    .cockpit.is-resizing .pane-resizer.active {
+      background: var(--surface-2); outline: none;
+    }
+    .pane-resizer:hover::before,
+    .pane-resizer:focus-visible::before,
+    .cockpit.is-resizing .pane-resizer.active::before {
+      background: var(--accent);
+    }
     .pane-scroll {
       flex: 1 1 auto; overflow-y: auto; min-height: 0; padding: var(--s4);
       scrollbar-width: none;        /* Firefox */
@@ -497,6 +527,7 @@
     @media (max-width: 1099px) {
       body { height: auto; min-height: 100dvh; overflow: auto; }
       .cockpit { display: block; }
+      .pane-resizer { display: none; }
       .pane { border-right: 0; border-bottom: var(--bw2) solid var(--edge); }
       .pane-right { border-bottom: 0; }
       .pane-scroll { overflow: visible; }
@@ -527,9 +558,11 @@
     <section class="pane pane-queue" aria-label="Issue queue">
       <div id="pane-queue" class="pane-scroll"><div class="placeholder">Loading…</div></div>
     </section>
+    <div class="pane-resizer" data-resizer="left" role="separator" aria-label="Resize queue and issue summary panes" aria-orientation="vertical" tabindex="0"></div>
     <section class="pane pane-center" aria-label="Selected issue summary">
       <div id="pane-center" class="pane-scroll"></div>
     </section>
+    <div class="pane-resizer" data-resizer="right" role="separator" aria-label="Resize issue summary and investigation panes" aria-orientation="vertical" tabindex="0"></div>
     <section class="pane pane-right" aria-label="Investigation and evidence">
       <div id="pane-right" class="pane-scroll"></div>
     </section>
@@ -1772,10 +1805,161 @@
       });
     }
 
+    // ---- Resizable desktop panes ----
+    const PANE_SIZE_KEY = "forge-pane-widths";
+    const PANE_MIN = { queue: 260, center: 320, right: 300 };
+    const RESIZER_W = 16; // two 8px handles in the desktop grid
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function getPaneEls() {
+      return {
+        shell: document.querySelector(".cockpit"),
+        queue: document.querySelector(".pane-queue"),
+        center: document.querySelector(".pane-center"),
+        right: document.querySelector(".pane-right"),
+      };
+    }
+
+    function getPaneSizes() {
+      const els = getPaneEls();
+      if (!els.queue || !els.center || !els.right) return null;
+      return {
+        queue: els.queue.getBoundingClientRect().width,
+        center: els.center.getBoundingClientRect().width,
+        right: els.right.getBoundingClientRect().width,
+      };
+    }
+
+    function availablePaneWidth(shell) {
+      return Math.max(0, shell.getBoundingClientRect().width - RESIZER_W);
+    }
+
+    function normalizePaneSizes(raw, shell) {
+      const total = availablePaneWidth(shell);
+      const minTotal = PANE_MIN.queue + PANE_MIN.center + PANE_MIN.right;
+      if (total <= 0) return raw;
+      if (total < minTotal) {
+        const scale = total / minTotal;
+        return {
+          queue: Math.floor(PANE_MIN.queue * scale),
+          center: Math.floor(PANE_MIN.center * scale),
+          right: Math.max(1, total - Math.floor(PANE_MIN.queue * scale) - Math.floor(PANE_MIN.center * scale)),
+        };
+      }
+      let q = clamp(raw.queue || 340, PANE_MIN.queue, total - PANE_MIN.center - PANE_MIN.right);
+      let r = clamp(raw.right || 380, PANE_MIN.right, total - q - PANE_MIN.center);
+      let c = total - q - r;
+      if (c < PANE_MIN.center) {
+        const deficit = PANE_MIN.center - c;
+        const takeRight = Math.min(deficit, r - PANE_MIN.right);
+        r -= takeRight;
+        q -= Math.min(deficit - takeRight, q - PANE_MIN.queue);
+        c = total - q - r;
+      }
+      return { queue: Math.round(q), center: Math.round(c), right: Math.round(r) };
+    }
+
+    function applyPaneSizes(sizes, persist) {
+      const els = getPaneEls();
+      if (!els.shell || window.matchMedia("(max-width: 1099px)").matches) return;
+      const next = normalizePaneSizes(sizes, els.shell);
+      els.shell.style.setProperty("--queue-col", next.queue + "px");
+      els.shell.style.setProperty("--center-col", next.center + "px");
+      els.shell.style.setProperty("--right-col", next.right + "px");
+      if (persist) {
+        try { localStorage.setItem(PANE_SIZE_KEY, JSON.stringify(next)); } catch (e) { /* storage blocked */ }
+      }
+    }
+
+    function savedPaneSizes() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(PANE_SIZE_KEY) || "null");
+        return parsed && typeof parsed === "object" ? parsed : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function initPaneResizing() {
+      const els = getPaneEls();
+      if (!els.shell) return;
+      const saved = savedPaneSizes();
+      if (saved) applyPaneSizes(saved, false);
+
+      document.querySelectorAll(".pane-resizer[data-resizer]").forEach(function (handle) {
+        let drag = null;
+        const side = handle.getAttribute("data-resizer");
+
+        const startDrag = function (clientX, pointerId) {
+          const sizes = getPaneSizes();
+          if (!sizes || window.matchMedia("(max-width: 1099px)").matches) return;
+          drag = { x: clientX, sizes: sizes };
+          els.shell.classList.add("is-resizing");
+          handle.classList.add("active");
+          if (pointerId != null && handle.setPointerCapture) handle.setPointerCapture(pointerId);
+        };
+
+        const moveDrag = function (clientX) {
+          if (!drag) return;
+          const dx = clientX - drag.x;
+          if (side === "left") {
+            applyPaneSizes({
+              queue: drag.sizes.queue + dx,
+              center: drag.sizes.center - dx,
+              right: drag.sizes.right,
+            }, true);
+          } else {
+            applyPaneSizes({
+              queue: drag.sizes.queue,
+              center: drag.sizes.center + dx,
+              right: drag.sizes.right - dx,
+            }, true);
+          }
+        };
+
+        const endDrag = function () {
+          if (!drag) return;
+          drag = null;
+          els.shell.classList.remove("is-resizing");
+          handle.classList.remove("active");
+        };
+
+        handle.addEventListener("pointerdown", function (e) {
+          e.preventDefault();
+          startDrag(e.clientX, e.pointerId);
+        });
+        handle.addEventListener("pointermove", function (e) { moveDrag(e.clientX); });
+        handle.addEventListener("pointerup", endDrag);
+        handle.addEventListener("pointercancel", endDrag);
+        handle.addEventListener("keydown", function (e) {
+          if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+          const sizes = getPaneSizes();
+          if (!sizes) return;
+          e.preventDefault();
+          const step = e.shiftKey ? 60 : 24;
+          const dx = e.key === "ArrowRight" ? step : -step;
+          if (side === "left") {
+            applyPaneSizes({ queue: sizes.queue + dx, center: sizes.center - dx, right: sizes.right }, true);
+          } else {
+            applyPaneSizes({ queue: sizes.queue, center: sizes.center + dx, right: sizes.right - dx }, true);
+          }
+        });
+      });
+
+      window.addEventListener("resize", function () {
+        const current = getPaneSizes() || savedPaneSizes();
+        if (current) applyPaneSizes(current, false);
+      });
+    }
+
     // Load the SDK from the injected API origin, then boot. If there is no
     // injected config (local/static serving), boot straight into mock mode.
     (function () {
       initTheme();
+      initPaneResizing();
       const cfg = window.__LEMMA_CONFIG__;
       if (!cfg || !cfg.apiUrl) { boot(); return; }
       const base = cfg.apiUrl.replace(/\/$/, "");
