@@ -684,7 +684,7 @@
           // One retry: the pod backend can 503/timeout transiently on first hit.
           for (let attempt = 0; attempt < 2 && this.mode !== "live"; attempt++) {
             try {
-              this.client = this.client || new window.LemmaClient.LemmaClient();
+              this.client = this.client || new window.LemmaClient.LemmaClient({ timeoutMs: 45000 });
               const state = await this.client.initialize();   // { status, user }
               if (state && state.status === "authenticated") {
                 this.mode = "live";
@@ -743,29 +743,103 @@
         return { mode: "mock", run_id: "mock-" + issue.id, hypothesis: mockHypothesisForIssue(issue), evidence: mockEvidenceForIssue(issue), proposed_fix: null };
       },
 
-      async _runInvestigateLive(issue, timeoutMs = 120000, pollMs = 3000) {
+      async _runInvestigateLive(issue, timeoutMs = 180000, pollMs = 3000) {
         const wf = this.client.workflows;
-        const createRun = wf.createRun || wf.create_run;
-        const submitForm = wf.submitForm || wf.submit_form;
-        const runGet = wf.runGet || wf.run_get || wf.getRun || wf.get;
-        if (!createRun || !submitForm) return null;
-        const run = await createRun.call(wf, "investigate");
+        const runs = wf && wf.runs ? wf.runs : {};
+        const createRun = runs.create || wf.createRun || wf.create_run;
+        const submitForm = runs.submitForm || wf.submitForm || wf.submit_form;
+        const runGet = runs.get || wf.runGet || wf.run_get || wf.getRun || wf.get;
+        if (!createRun || !submitForm || !runGet) return null;
+        const runOwner = runs.create ? runs : wf;
+        const run = await createRun.call(runOwner, "investigate");
         const runId = run && (run.id || run.run_id);
-        // The form node is `intake` (input_schema { issue_id }), not "issue_form".
-        try { await submitForm.call(wf, runId, "intake", { issue_id: issue.id }); }
-        catch (err) { await submitForm.call(wf, runId, { issue_id: issue.id }); }
+        if (!runId) return null;
+
+        // Lemma can hold form submission open while the whole graph executes.
+        // Submit once, swallow request timeouts, and poll the run by id; retrying a
+        // timed-out submit can double-submit the FORM node.
+        let submitError = null;
+        const submitPromise = this._submitInvestigateForm(wf, submitForm, runId, issue.id)
+          .catch(function (err) {
+            if (!DataSource._isWorkflowTimeout(err)) submitError = err;
+            return null;
+          });
         const deadline = Date.now() + timeoutMs;
         const TERMINAL = { COMPLETED: 1, FAILED: 1, CANCELLED: 1, ERROR: 1, STOPPED: 1 };
+        const getOwner = runs.get ? runs : wf;
         while (runGet && Date.now() < deadline) {
           await new Promise(function (r) { setTimeout(r, pollMs); });
           let cur;
-          try { cur = await runGet.call(wf, runId); } catch (err) { continue; }
-          if (cur && TERMINAL[cur.status]) {
-            const synth = (cur.execution_context || {}).synthesize || {};
-            return { mode: "live", run_id: runId, hypothesis: synth.hypothesis || "", evidence: synth.evidence || [], proposed_fix: synth.proposed_fix || null };
+          try { cur = await runGet.call(getOwner, runId); } catch (err) { continue; }
+          DataSource._emitInvestigateProgress(null, cur, runId);
+          const status = String((cur && cur.status) || "").toUpperCase();
+          const synth = this._synthOutput(cur);
+          if (synth && synth.hypothesis) {
+            return { mode: "live", run_id: runId, run_url: this._workflowRunUrl(runId), hypothesis: synth.hypothesis || "", evidence: synth.evidence || [], proposed_fix: synth.proposed_fix || null };
+          }
+          if (cur && TERMINAL[status]) {
+            return { mode: "live", run_id: runId, run_url: this._workflowRunUrl(runId), hypothesis: synth.hypothesis || "", evidence: synth.evidence || [], proposed_fix: synth.proposed_fix || null };
           }
         }
-        return { mode: "live", run_id: runId, hypothesis: "", evidence: [], proposed_fix: null };
+        await submitPromise;
+        if (submitError) console.warn("Investigate form submit failed before polling completed:", submitError);
+        return { mode: "live", run_id: runId, run_url: this._workflowRunUrl(runId), hypothesis: "", evidence: [], proposed_fix: null };
+      },
+
+      async _submitInvestigateForm(wf, submitForm, runId, issueId) {
+        const formOwner = wf.runs && wf.runs.submitForm ? wf.runs : wf;
+        const attempts = [
+          function () { return submitForm.call(formOwner, runId, { node_id: "intake", inputs: { issue_id: issueId } }); },
+          function () { return submitForm.call(formOwner, runId, { nodeId: "intake", inputs: { issue_id: issueId } }); },
+          function () { return submitForm.call(formOwner, runId, "intake", { issue_id: issueId }); },
+          function () { return submitForm.call(formOwner, runId, { issue_id: issueId }); },
+        ];
+        let lastErr = null;
+        for (const attempt of attempts) {
+          try { return await attempt(); }
+          catch (err) {
+            if (this._isWorkflowTimeout(err)) throw err;
+            lastErr = err;
+          }
+        }
+        throw lastErr || new Error("Could not submit workflow form.");
+      },
+
+      _isWorkflowTimeout(err) {
+        const msg = String((err && (err.message || err.name || err.statusText)) || err || "").toLowerCase();
+        return msg.indexOf("timeout") >= 0 ||
+          msg.indexOf("timed out") >= 0 ||
+          msg.indexOf("504") >= 0 ||
+          msg.indexOf("gateway") >= 0 ||
+          msg.indexOf("network request failed") >= 0;
+      },
+
+      _synthOutput(run) {
+        const ctx = (run && (run.execution_context || run.executionContext)) || {};
+        const synth = ctx.synthesize || ctx["synthesize"] || {};
+        const out = synth.output || synth.output_data || synth.result || synth;
+        return out && typeof out === "object" ? out : {};
+      },
+
+      _emitInvestigateProgress(onProgress, run, runId) {
+        if (!onProgress) return;
+        const ctx = (run && (run.execution_context || run.executionContext)) || {};
+        const active = run && (run.active_wait || run.activeWait);
+        let phase = "queued";
+        if (ctx.intake || (active && active.node_id === "intake")) phase = "intake";
+        if (ctx.analyze) phase = "analyze";
+        if (ctx.commits) phase = "commits";
+        if (ctx.similar) phase = "similar";
+        if (ctx.source) phase = "source";
+        if (ctx.synthesize) phase = "synthesis";
+        onProgress({ phase: phase, run_id: runId, run_url: this._workflowRunUrl(runId) });
+      },
+
+      _workflowRunUrl(runId) {
+        const cfg = window.__LEMMA_CONFIG__ || {};
+        const podId = cfg.podId || cfg.pod_id || FORGE_POD_ID;
+        return "https://lemma.work/pod/" + encodeURIComponent(podId) +
+          "/flows/investigate/runs/" + encodeURIComponent(runId);
       },
 
       // Write an issue's lifecycle status. Live mode goes through the granted
